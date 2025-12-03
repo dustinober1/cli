@@ -4,9 +4,10 @@ Vibe Coder - Main CLI Entry Point
 
 A provider-independent CLI coding assistant built with Python.
 """
+from typing import Optional
+
 import typer
 from rich.console import Console
-from typing import Optional
 
 app = typer.Typer(
     name="vibe-coder",
@@ -21,22 +22,13 @@ console = Console()
 @app.command()
 def chat(
     provider: Optional[str] = typer.Option(
-        None,
-        "--provider",
-        "-p",
-        help="Provider name to use for this session"
+        None, "--provider", "-p", help="Provider name to use for this session"
     ),
     model: Optional[str] = typer.Option(
-        None,
-        "--model",
-        "-m",
-        help="Model to use (overrides provider default)"
+        None, "--model", "-m", help="Model to use (overrides provider default)"
     ),
     temperature: Optional[float] = typer.Option(
-        None,
-        "--temperature",
-        "-t",
-        help="Temperature for response generation (0.0-2.0)"
+        None, "--temperature", "-t", help="Temperature for response generation (0.0-2.0)"
     ),
 ):
     """
@@ -88,8 +80,7 @@ def config(
 @app.command()
 def test(
     provider: Optional[str] = typer.Argument(
-        None,
-        help="Provider name to test (uses current if not specified)"
+        None, help="Provider name to test (uses current if not specified)"
     ),
 ):
     """

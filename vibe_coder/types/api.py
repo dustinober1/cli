@@ -7,7 +7,7 @@ and messages that flow between the CLI and AI providers.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 
 class MessageRole(Enum):
@@ -167,6 +167,9 @@ class ApiResponse:
 
     finish_reason: Optional[str] = None
     """Why the response stopped (e.g., 'stop', 'length')"""
+
+    error: Optional[Dict[str, str]] = None
+    """Error information if the request failed"""
 
     def to_dict(self) -> dict:
         """Convert response to dictionary."""

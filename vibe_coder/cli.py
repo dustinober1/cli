@@ -9,6 +9,10 @@ from typing import Optional
 import typer
 from rich.console import Console
 
+from vibe_coder.commands.chat import ChatCommand
+from vibe_coder.commands.config import ConfigCommand
+from vibe_coder.commands.setup import SetupCommand
+
 app = typer.Typer(
     name="vibe-coder",
     help="🐍 A configurable CLI coding assistant that works with any AI API",
@@ -38,11 +42,24 @@ def chat(
         vibe-coder chat
         vibe-coder chat --provider my-openai
         vibe-coder chat --model gpt-4 --temperature 0.9
+
+    Chat Commands:
+        /help          Show available commands
+        /exit, /quit   Exit the chat
+        /clear         Clear conversation history
+        /history       Show conversation history
+        /provider      Show current provider info
+        /save [name]   Save conversation to file
     """
-    console.print("[yellow]Chat command - Coming soon![/yellow]")
-    console.print(f"Provider: {provider or 'default'}")
-    console.print(f"Model: {model or 'default'}")
-    console.print(f"Temperature: {temperature or 0.7}")
+    import asyncio
+
+    chat_command = ChatCommand()
+    success = asyncio.run(
+        chat_command.run(provider_name=provider, model=model, temperature=temperature)
+    )
+
+    if not success:
+        raise typer.Exit(1)
 
 
 @app.command()
@@ -51,30 +68,49 @@ def setup():
     Run the interactive setup wizard to configure providers.
 
     This will guide you through configuring:
-    - Provider name
-    - API endpoint
-    - API key
-    - Default model and parameters
+    - Provider selection (OpenAI, Anthropic, Ollama, etc.)
+    - API endpoint and key configuration
+    - Model selection and parameters
+    - Connection testing
     """
-    console.print("[yellow]Setup wizard - Coming soon![/yellow]")
-    console.print("This will configure your AI providers")
+    import asyncio
+
+    setup_command = SetupCommand()
+    success = asyncio.run(setup_command.run())
+
+    if not success:
+        raise typer.Exit(1)
 
 
 @app.command()
 def config(
     action: str = typer.Argument(..., help="Action: list, show, add, edit, delete"),
+    name: Optional[str] = typer.Argument(None, help="Provider name (for show, edit, delete)"),
 ):
     """
     Manage provider configurations.
 
     Actions:
         list      - List all configured providers
-        show      - Show current configuration
-        add       - Add a new provider
-        edit      - Edit existing provider
-        delete    - Delete a provider
+        show      - Show detailed provider information
+        add       - Add a new provider (launches setup wizard)
+        edit      - Edit existing provider configuration
+        delete    - Delete a provider configuration
+
+    Examples:
+        vibe-coder config list
+        vibe-coder config show my-openai
+        vibe-coder config add
+        vibe-coder config edit my-claude
+        vibe-coder delete old-provider
     """
-    console.print(f"[yellow]Config {action} - Coming soon![/yellow]")
+    import asyncio
+
+    config_command = ConfigCommand()
+    success = asyncio.run(config_command.run(action, name))
+
+    if not success:
+        raise typer.Exit(1)
 
 
 @app.command()
@@ -89,9 +125,17 @@ def test(
     Examples:
         vibe-coder test
         vibe-coder test my-openai
+        vibe-coder test --all
     """
-    console.print(f"[yellow]Testing connection to {provider or 'default provider'}...[/yellow]")
-    console.print("[green]✓[/green] Connection test - Coming soon!")
+    import asyncio
+
+    from vibe_coder.commands.test import TestCommand
+
+    test_command = TestCommand()
+    success = asyncio.run(test_command.run(provider))
+
+    if not success:
+        raise typer.Exit(1)
 
 
 @app.callback()

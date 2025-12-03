@@ -2,10 +2,10 @@
 
 import pytest
 
-from vibe_coder.api.factory import ClientFactory
-from vibe_coder.api.openai_client import OpenAIClient
 from vibe_coder.api.anthropic_client import AnthropicClient
+from vibe_coder.api.factory import ClientFactory
 from vibe_coder.api.generic_client import GenericClient
+from vibe_coder.api.openai_client import OpenAIClient
 from vibe_coder.types.config import AIProvider
 
 
@@ -18,7 +18,7 @@ class TestClientFactory:
             name="openai",
             api_key="sk-test123456",
             endpoint="https://api.openai.com/v1",
-            model="gpt-4"
+            model="gpt-4",
         )
 
         client = ClientFactory.create_client(provider)
@@ -31,7 +31,7 @@ class TestClientFactory:
             name="anthropic",
             api_key="sk-ant-test123456",
             endpoint="https://api.anthropic.com",
-            model="claude-3-5-sonnet-20241022"
+            model="claude-3-5-sonnet-20241022",
         )
 
         client = ClientFactory.create_client(provider)
@@ -41,10 +41,7 @@ class TestClientFactory:
     def test_create_generic_client_by_name(self):
         """Test creating generic client by provider name."""
         provider = AIProvider(
-            name="ollama",
-            api_key="not-needed",
-            endpoint="http://localhost:11434",
-            model="llama3"
+            name="ollama", api_key="not-needed", endpoint="http://localhost:11434", model="llama3"
         )
 
         client = ClientFactory.create_client(provider)
@@ -57,7 +54,7 @@ class TestClientFactory:
             name="my-custom-gpt",
             api_key="sk-test123456",
             endpoint="https://api.openai.com/v1",
-            model="gpt-4"
+            model="gpt-4",
         )
 
         client = ClientFactory.create_client(provider)
@@ -69,7 +66,7 @@ class TestClientFactory:
             name="my-claude",
             api_key="sk-ant-test123456",
             endpoint="https://api.anthropic.com",
-            model="claude-3-5-sonnet-20241022"
+            model="claude-3-5-sonnet-20241022",
         )
 
         client = ClientFactory.create_client(provider)
@@ -81,7 +78,7 @@ class TestClientFactory:
             name="unknown-llm",
             api_key="test-key",
             endpoint="https://api.unknown.com/v1",
-            model="unknown-model"
+            model="unknown-model",
         )
 
         client = ClientFactory.create_client(provider)
@@ -94,7 +91,7 @@ class TestClientFactory:
             name="my-gpt-provider",
             api_key="sk-test123456",
             endpoint="https://api.openai.com/v1",
-            model="gpt-4"
+            model="gpt-4",
         )
         client = ClientFactory.create_client(provider)
         assert isinstance(client, OpenAIClient)
@@ -104,7 +101,7 @@ class TestClientFactory:
             name="custom-claude",
             api_key="sk-ant-test123456",
             endpoint="https://api.anthropic.com",
-            model="claude-3-5-sonnet-20241022"
+            model="claude-3-5-sonnet-20241022",
         )
         client = ClientFactory.create_client(provider)
         assert isinstance(client, AnthropicClient)
@@ -112,20 +109,12 @@ class TestClientFactory:
     def test_invalid_provider_config(self):
         """Test validation of provider configuration."""
         # Missing API key
-        provider = AIProvider(
-            name="openai",
-            api_key="",
-            endpoint="https://api.openai.com/v1"
-        )
+        provider = AIProvider(name="openai", api_key="", endpoint="https://api.openai.com/v1")
         with pytest.raises(ValueError, match="api_key and endpoint"):
             ClientFactory.create_client(provider)
 
         # Missing endpoint
-        provider = AIProvider(
-            name="openai",
-            api_key="sk-test123456",
-            endpoint=""
-        )
+        provider = AIProvider(name="openai", api_key="sk-test123456", endpoint="")
         with pytest.raises(ValueError, match="api_key and endpoint"):
             ClientFactory.create_client(provider)
 
@@ -155,19 +144,13 @@ class TestClientFactory:
         """Test provider configuration validation."""
         # Valid configuration
         provider = AIProvider(
-            name="openai",
-            api_key="sk-test123456789",
-            endpoint="https://api.openai.com/v1"
+            name="openai", api_key="sk-test123456789", endpoint="https://api.openai.com/v1"
         )
         errors = ClientFactory.validate_provider_config(provider)
         assert len(errors) == 0
 
         # Invalid configuration
-        provider = AIProvider(
-            name="openai",
-            api_key="short",
-            endpoint="invalid-url"
-        )
+        provider = AIProvider(name="openai", api_key="short", endpoint="invalid-url")
         errors = ClientFactory.validate_provider_config(provider)
         assert len(errors) > 0
         assert any("API key" in error for error in errors)
@@ -176,9 +159,7 @@ class TestClientFactory:
     def test_validate_openai_api_key_pattern(self):
         """Test OpenAI API key validation."""
         provider = AIProvider(
-            name="openai",
-            api_key="invalid-key",
-            endpoint="https://api.openai.com/v1"
+            name="openai", api_key="invalid-key", endpoint="https://api.openai.com/v1"
         )
         errors = ClientFactory.validate_provider_config(provider)
         assert any("API keys should start with 'sk-'" in error for error in errors)
@@ -186,9 +167,7 @@ class TestClientFactory:
     def test_validate_anthropic_api_key_pattern(self):
         """Test Anthropic API key validation."""
         provider = AIProvider(
-            name="anthropic",
-            api_key="invalid-key",
-            endpoint="https://api.anthropic.com"
+            name="anthropic", api_key="invalid-key", endpoint="https://api.anthropic.com"
         )
         errors = ClientFactory.validate_provider_config(provider)
         assert any("API keys should start with 'sk-ant-'" in error for error in errors)

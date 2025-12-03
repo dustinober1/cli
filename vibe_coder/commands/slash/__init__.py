@@ -1,0 +1,17 @@
+"""
+Slash command system for Vibe Coder.
+
+This module provides the infrastructure for parsing and executing
+slash commands within the chat interface.
+"""
+
+from .parser import SlashCommandParser
+from .base import SlashCommand, CommandContext
+from .registry import command_registry
+
+__all__ = [
+    "SlashCommandParser",
+    "SlashCommand",
+    "CommandContext",
+    "command_registry",
+]

@@ -1,5 +1,4 @@
 """Tests for API type definitions (dataclasses)."""
-import pytest
 
 from vibe_coder.types.api import ApiMessage, ApiRequest, ApiResponse, MessageRole, TokenUsage
 
@@ -42,9 +41,7 @@ class TestApiMessage:
 
     def test_create_system_message(self):
         """Test creating a system message."""
-        msg = ApiMessage(
-            role=MessageRole.SYSTEM, content="You are a helpful assistant."
-        )
+        msg = ApiMessage(role=MessageRole.SYSTEM, content="You are a helpful assistant.")
         assert msg.role == MessageRole.SYSTEM
         assert msg.content == "You are a helpful assistant."
 
@@ -114,9 +111,7 @@ class TestTokenUsage:
 
     def test_token_usage_with_large_values(self):
         """Test TokenUsage with large token counts."""
-        usage = TokenUsage(
-            prompt_tokens=100000, completion_tokens=50000, total_tokens=150000
-        )
+        usage = TokenUsage(prompt_tokens=100000, completion_tokens=50000, total_tokens=150000)
         assert usage.prompt_tokens == 100000
         assert usage.total_tokens == 150000
 
@@ -264,9 +259,7 @@ class TestIntegration:
             ApiMessage(role=MessageRole.SYSTEM, content="You are helpful"),
             ApiMessage(role=MessageRole.USER, content="What is 2+2?"),
         ]
-        request = ApiRequest(
-            messages=messages, model="gpt-4", temperature=0.0, stream=False
-        )
+        request = ApiRequest(messages=messages, model="gpt-4", temperature=0.0, stream=False)
 
         # Simulate response
         usage = TokenUsage(prompt_tokens=20, completion_tokens=10, total_tokens=30)
@@ -301,14 +294,6 @@ class TestIntegration:
 
     def test_serialization_workflow(self):
         """Test serializing and deserializing API objects."""
-        # Create request
-        messages = [
-            ApiMessage(role=MessageRole.USER, content="Test"),
-        ]
-        original_request = ApiRequest(
-            messages=messages, model="gpt-4", temperature=0.8
-        )
-
         # Create response
         original_response = ApiResponse(
             content="Response",
@@ -316,13 +301,6 @@ class TestIntegration:
             usage=TokenUsage(10, 5, 15),
             finish_reason="stop",
         )
-
-        # Serialize (would be sent to API)
-        request_for_api = {
-            "messages": [msg.to_dict() for msg in original_request.messages],
-            "model": original_request.model,
-            "temperature": original_request.temperature,
-        }
 
         # Deserialize response (would come from API)
         response_from_api = ApiResponse(

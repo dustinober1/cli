@@ -1,4 +1,5 @@
 """Tests for configuration type definitions (dataclasses)."""
+
 import pytest
 
 from vibe_coder.types.config import AIProvider, AppConfig, InteractionMode, ProviderType
@@ -208,12 +209,8 @@ class TestAppConfig:
     def test_list_providers(self):
         """Test listing all configured providers."""
         config = AppConfig(current_provider="")
-        provider1 = AIProvider(
-            name="p1", api_key="sk-1", endpoint="https://api1.com"
-        )
-        provider2 = AIProvider(
-            name="p2", api_key="sk-2", endpoint="https://api2.com"
-        )
+        provider1 = AIProvider(name="p1", api_key="sk-1", endpoint="https://api1.com")
+        provider2 = AIProvider(name="p2", api_key="sk-2", endpoint="https://api2.com")
         config.set_provider("p1", provider1)
         config.set_provider("p2", provider2)
 
@@ -228,9 +225,7 @@ class TestAppConfig:
 
     def test_delete_provider(self):
         """Test deleting a provider."""
-        provider = AIProvider(
-            name="to-delete", api_key="sk-test", endpoint="https://api.com"
-        )
+        provider = AIProvider(name="to-delete", api_key="sk-test", endpoint="https://api.com")
         config = AppConfig(current_provider="to-delete")
         config.set_provider("to-delete", provider)
         assert config.has_provider("to-delete")
@@ -240,9 +235,7 @@ class TestAppConfig:
 
     def test_delete_current_provider_clears_current(self):
         """Test that deleting current provider clears current_provider."""
-        provider = AIProvider(
-            name="current", api_key="sk-test", endpoint="https://api.com"
-        )
+        provider = AIProvider(name="current", api_key="sk-test", endpoint="https://api.com")
         config = AppConfig(current_provider="current")
         config.set_provider("current", provider)
         config.delete_provider("current")
@@ -250,12 +243,8 @@ class TestAppConfig:
 
     def test_delete_non_current_provider(self):
         """Test deleting a non-current provider doesn't affect current."""
-        provider1 = AIProvider(
-            name="p1", api_key="sk-1", endpoint="https://api1.com"
-        )
-        provider2 = AIProvider(
-            name="p2", api_key="sk-2", endpoint="https://api2.com"
-        )
+        provider1 = AIProvider(name="p1", api_key="sk-1", endpoint="https://api1.com")
+        provider2 = AIProvider(name="p2", api_key="sk-2", endpoint="https://api2.com")
         config = AppConfig(current_provider="p1")
         config.set_provider("p1", provider1)
         config.set_provider("p2", provider2)
@@ -267,9 +256,7 @@ class TestAppConfig:
 
     def test_has_provider(self):
         """Test checking if a provider exists."""
-        provider = AIProvider(
-            name="exists", api_key="sk-test", endpoint="https://api.com"
-        )
+        provider = AIProvider(name="exists", api_key="sk-test", endpoint="https://api.com")
         config = AppConfig(current_provider="")
         config.set_provider("exists", provider)
 

@@ -1,11 +1,11 @@
 """File operations utilities for slash commands."""
 
+import hashlib
 import os
 import shutil
-import hashlib
-from pathlib import Path
-from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List
 
 
 class FileOperations:
@@ -26,7 +26,7 @@ class FileOperations:
         """Read file content with error handling."""
         try:
             path = self.get_absolute_path(filepath)
-            with open(path, 'r', encoding='utf-8') as f:
+            with open(path, "r", encoding="utf-8") as f:
                 return f.read()
         except FileNotFoundError:
             raise FileNotFoundError(f"File not found: {filepath}")
@@ -36,11 +36,7 @@ class FileOperations:
             raise UnicodeDecodeError(f"File is not text or uses unknown encoding: {filepath}")
 
     async def write_file(
-        self,
-        filepath: str,
-        content: str,
-        backup: bool = True,
-        create_dirs: bool = True
+        self, filepath: str, content: str, backup: bool = True, create_dirs: bool = True
     ) -> bool:
         """
         Write content to file with optional backup.
@@ -58,7 +54,7 @@ class FileOperations:
                 path.parent.mkdir(parents=True, exist_ok=True)
 
             # Write the file
-            with open(path, 'w', encoding='utf-8') as f:
+            with open(path, "w", encoding="utf-8") as f:
                 f.write(content)
 
             return True
@@ -104,13 +100,15 @@ class FileOperations:
         # If it's a text file, add content analysis
         if path.is_file() and self._is_text_file(path):
             try:
-                content = path.read_text(encoding='utf-8')
-                analysis.update({
-                    "line_count": len(content.splitlines()),
-                    "char_count": len(content),
-                    "encoding": "utf-8",
-                    "hash": hashlib.md5(content.encode()).hexdigest(),
-                })
+                content = path.read_text(encoding="utf-8")
+                analysis.update(
+                    {
+                        "line_count": len(content.splitlines()),
+                        "char_count": len(content),
+                        "encoding": "utf-8",
+                        "hash": hashlib.md5(content.encode()).hexdigest(),
+                    }
+                )
 
                 # Language-specific analysis
                 if analysis["file_type"] in ["python", "javascript", "typescript", "java"]:
@@ -198,11 +196,53 @@ class FileOperations:
         """Check if file is likely a text file."""
         # Simple heuristic based on extension
         text_extensions = {
-            ".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".cpp", ".c", ".cs", ".go", ".rs",
-            ".php", ".rb", ".swift", ".kt", ".scala", ".r", ".sql", ".sh", ".bash", ".zsh",
-            ".fish", ".ps1", ".bat", ".cmd", ".html", ".htm", ".css", ".scss", ".sass", ".less",
-            ".json", ".xml", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".conf", ".md",
-            ".markdown", ".txt", ".csv", ".tsv", ".log", ".gitignore", ".dockerfile"
+            ".py",
+            ".js",
+            ".ts",
+            ".jsx",
+            ".tsx",
+            ".java",
+            ".cpp",
+            ".c",
+            ".cs",
+            ".go",
+            ".rs",
+            ".php",
+            ".rb",
+            ".swift",
+            ".kt",
+            ".scala",
+            ".r",
+            ".sql",
+            ".sh",
+            ".bash",
+            ".zsh",
+            ".fish",
+            ".ps1",
+            ".bat",
+            ".cmd",
+            ".html",
+            ".htm",
+            ".css",
+            ".scss",
+            ".sass",
+            ".less",
+            ".json",
+            ".xml",
+            ".yaml",
+            ".yml",
+            ".toml",
+            ".ini",
+            ".cfg",
+            ".conf",
+            ".md",
+            ".markdown",
+            ".txt",
+            ".csv",
+            ".tsv",
+            ".log",
+            ".gitignore",
+            ".dockerfile",
         }
 
         return path.suffix.lower() in text_extensions
@@ -286,7 +326,10 @@ class FileOperations:
             stripped = line.strip()
             if stripped.startswith("class "):
                 analysis["classes"] += 1
-            elif any(stripped.startswith(f"{mod} ") for mod in ["public", "private", "protected", "static"]):
+            elif any(
+                stripped.startswith(f"{mod} ")
+                for mod in ["public", "private", "protected", "static"]
+            ):
                 analysis["methods"] += 1
             elif stripped.startswith("import "):
                 analysis["imports"] += 1
@@ -322,7 +365,7 @@ class FileOperations:
         directory: str = ".",
         pattern: str = "*",
         recursive: bool = False,
-        include_hidden: bool = False
+        include_hidden: bool = False,
     ) -> List[str]:
         """List files in directory with optional filtering."""
         path = self.get_absolute_path(directory)
@@ -334,7 +377,6 @@ class FileOperations:
             raise ValueError(f"Path is not a directory: {directory}")
 
         files = []
-        pattern_path = path / pattern
 
         if recursive:
             files = list(path.rglob(pattern))
@@ -343,7 +385,7 @@ class FileOperations:
 
         # Filter out hidden files if not included
         if not include_hidden:
-            files = [f for f in files if not f.name.startswith('.')]
+            files = [f for f in files if not f.name.startswith(".")]
 
         # Convert to relative paths
         return [str(f.relative_to(self.working_directory)) for f in files if f.is_file()]
@@ -363,29 +405,33 @@ class FileOperations:
                 "type": "directory",
                 "name": current_path.name,
                 "path": str(current_path.relative_to(self.working_directory)),
-                "children": []
+                "children": [],
             }
 
             try:
                 for item in sorted(current_path.iterdir()):
-                    if item.name.startswith('.'):
+                    if item.name.startswith("."):
                         continue  # Skip hidden files
 
                     if item.is_file():
-                        tree["children"].append({
-                            "type": "file",
-                            "name": item.name,
-                            "size": item.stat().st_size,
-                            "extension": item.suffix.lower() if item.suffix else None
-                        })
+                        tree["children"].append(
+                            {
+                                "type": "file",
+                                "name": item.name,
+                                "size": item.stat().st_size,
+                                "extension": item.suffix.lower() if item.suffix else None,
+                            }
+                        )
                     elif item.is_dir():
                         tree["children"].append(build_tree(item, current_depth + 1))
             except PermissionError:
-                tree["children"].append({
-                    "type": "error",
-                    "name": "Permission denied",
-                    "message": f"Cannot access {current_path}"
-                })
+                tree["children"].append(
+                    {
+                        "type": "error",
+                        "name": "Permission denied",
+                        "message": f"Cannot access {current_path}",
+                    }
+                )
 
             return tree
 

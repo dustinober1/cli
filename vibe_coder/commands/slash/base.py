@@ -1,8 +1,8 @@
 """Base classes for slash commands."""
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List, Tuple
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple
 
 from vibe_coder.types.api import ApiMessage
 from vibe_coder.types.config import AIProvider
@@ -11,6 +11,7 @@ from vibe_coder.types.config import AIProvider
 @dataclass
 class CommandContext:
     """Context for slash command execution."""
+
     chat_history: List[ApiMessage]
     current_provider: AIProvider
     working_directory: str
@@ -22,6 +23,7 @@ class CommandContext:
     def get_file_path(self, relative_path: str) -> str:
         """Get absolute file path from relative path."""
         import os
+
         return os.path.join(self.working_directory, relative_path)
 
     def is_git_repo(self) -> bool:
@@ -37,7 +39,7 @@ class SlashCommand(ABC):
         name: str,
         description: str,
         aliases: Optional[List[str]] = None,
-        category: str = "general"
+        category: str = "general",
     ):
         self.name = name
         self.description = description

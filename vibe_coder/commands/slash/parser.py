@@ -1,10 +1,9 @@
 """Slash command parser and router."""
 
-import re
 import shlex
-from typing import Dict, List, Optional, Callable, Any
+from typing import Dict, List, Optional
 
-from .base import SlashCommand, CommandContext
+from .base import CommandContext, SlashCommand
 
 
 class SlashCommandParser:
@@ -14,11 +13,7 @@ class SlashCommandParser:
         self.commands: Dict[str, SlashCommand] = {}
         self.aliases: Dict[str, str] = {}  # alias -> command_name
 
-    def register_command(
-        self,
-        command: SlashCommand,
-        aliases: Optional[List[str]] = None
-    ) -> None:
+    def register_command(self, command: SlashCommand, aliases: Optional[List[str]] = None) -> None:
         """Register a slash command with optional aliases."""
         # Register main command
         self.commands[command.name] = command
@@ -34,7 +29,7 @@ class SlashCommandParser:
 
     def is_slash_command(self, message: str) -> bool:
         """Check if message contains a slash command."""
-        return message.strip().startswith('/')
+        return message.strip().startswith("/")
 
     def parse_command(self, message: str) -> Optional[tuple[str, List[str]]]:
         """
@@ -68,11 +63,7 @@ class SlashCommandParser:
 
         return command_name, args
 
-    async def parse_and_execute(
-        self,
-        message: str,
-        context: CommandContext
-    ) -> tuple[bool, str]:
+    async def parse_and_execute(self, message: str, context: CommandContext) -> tuple[bool, str]:
         """
         Parse message and execute appropriate command.
         Returns (success, response).
@@ -90,7 +81,10 @@ class SlashCommandParser:
                 suggestion = f"Did you mean: {', '.join(similar)}?"
                 return False, f"Unknown command: /{command_name}. {suggestion}"
             else:
-                return False, f"Unknown command: /{command_name}. Type /help for available commands."
+                return (
+                    False,
+                    f"Unknown command: /{command_name}. Type /help for available commands.",
+                )
 
         command = self.commands[command_name]
 
@@ -125,7 +119,9 @@ class SlashCommandParser:
         import difflib
 
         all_commands = list(self.commands.keys()) + list(self.aliases.keys())
-        similar = difflib.get_close_matches(command_name, all_commands, n=max_suggestions, cutoff=0.6)
+        similar = difflib.get_close_matches(
+            command_name, all_commands, n=max_suggestions, cutoff=0.6
+        )
         return [f"/{cmd}" for cmd in similar]
 
     def get_command_names(self) -> List[str]:

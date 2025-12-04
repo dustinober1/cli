@@ -1,12 +1,10 @@
 """Project analysis tools for slash commands."""
 
-import ast
-import os
 import json
 import re
+from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Dict, List, Set, Optional, Any, Tuple
-from collections import defaultdict, Counter
+from typing import Any, Dict, List, Optional
 
 
 class ProjectAnalyzer:
@@ -32,10 +30,11 @@ class ProjectAnalyzer:
             "structure": {},
             "code_metrics": {},
             "potential_issues": [],
-            "recommendations": []
+            "recommendations": [],
         }
 
         from datetime import datetime
+
         analysis["scan_timestamp"] = datetime.now().isoformat()
 
         # Scan file structure
@@ -79,18 +78,15 @@ class ProjectAnalyzer:
 
     def get_file_tree(self, max_depth: int = 3) -> Dict[str, Any]:
         """Generate hierarchical file tree."""
+
         def build_tree(path: Path, current_depth: int = 0) -> Dict[str, Any]:
             if current_depth > max_depth:
-                return {
-                    "name": path.name,
-                    "type": "directory",
-                    "truncated": True
-                }
+                return {"name": path.name, "type": "directory", "truncated": True}
 
             node = {
                 "name": path.name,
                 "type": "directory" if path.is_dir() else "file",
-                "path": str(path.relative_to(self.root_path))
+                "path": str(path.relative_to(self.root_path)),
             }
 
             if path.is_file():
@@ -105,10 +101,7 @@ class ProjectAnalyzer:
                         if not self._should_ignore_file(item):
                             node["children"].append(build_tree(item, current_depth + 1))
                 except PermissionError:
-                    node["children"] = [{
-                        "name": "Permission denied",
-                        "type": "error"
-                    }]
+                    node["children"] = [{"name": "Permission denied", "type": "error"}]
 
             return node
 
@@ -148,14 +141,28 @@ class ProjectAnalyzer:
         """Check if file should be ignored during analysis."""
         # Common ignore patterns
         ignore_patterns = {
-            ".git", ".svn", ".hg",
-            "__pycache__", ".pytest_cache", ".tox",
-            "node_modules", ".npm", ".yarn",
-            ".vscode", ".idea", ".DS_Store",
-            "*.pyc", "*.pyo", "*.pyd",
-            "*.so", "*.dylib", "*.dll",
-            "*.exe", "*.bin",
-            "*.log", "*.tmp"
+            ".git",
+            ".svn",
+            ".hg",
+            "__pycache__",
+            ".pytest_cache",
+            ".tox",
+            "node_modules",
+            ".npm",
+            ".yarn",
+            ".vscode",
+            ".idea",
+            ".DS_Store",
+            "*.pyc",
+            "*.pyo",
+            "*.pyd",
+            "*.so",
+            "*.dylib",
+            "*.dll",
+            "*.exe",
+            "*.bin",
+            "*.log",
+            "*.tmp",
         }
 
         path_str = str(path)
@@ -207,17 +214,37 @@ class ProjectAnalyzer:
     def _is_code_file(self, file_path: Path) -> bool:
         """Check if file is a source code file."""
         code_extensions = {
-            ".py", ".js", ".ts", ".jsx", ".tsx", ".java",
-            ".cpp", ".c", ".cs", ".go", ".rs", ".php", ".rb",
-            ".swift", ".kt", ".scala", ".r", ".sql", ".sh",
-            ".html", ".css", ".scss", ".sass", ".less"
+            ".py",
+            ".js",
+            ".ts",
+            ".jsx",
+            ".tsx",
+            ".java",
+            ".cpp",
+            ".c",
+            ".cs",
+            ".go",
+            ".rs",
+            ".php",
+            ".rb",
+            ".swift",
+            ".kt",
+            ".scala",
+            ".r",
+            ".sql",
+            ".sh",
+            ".html",
+            ".css",
+            ".scss",
+            ".sass",
+            ".less",
         }
         return file_path.suffix.lower() in code_extensions
 
     async def _analyze_code_file(self, file_path: Path) -> None:
         """Analyze a single code file."""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
             # Extract dependencies
@@ -232,7 +259,7 @@ class ProjectAnalyzer:
                 "content": content,
                 "dependencies": dependencies,
                 "language": self._detect_language(file_path),
-                "size": len(content)
+                "size": len(content),
             }
 
         except Exception as e:
@@ -241,7 +268,7 @@ class ProjectAnalyzer:
     def _extract_dependencies(self, file_path: Path) -> List[str]:
         """Extract dependencies from a file."""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
             return self._extract_dependencies_from_content(content, file_path.suffix)
         except Exception:
@@ -254,8 +281,8 @@ class ProjectAnalyzer:
         if extension == ".py":
             # Python imports
             import_patterns = [
-                r'^import\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)',
-                r'^from\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)\s+import'
+                r"^import\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)",
+                r"^from\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)\s+import",
             ]
             for pattern in import_patterns:
                 matches = re.findall(pattern, content, re.MULTILINE)
@@ -266,7 +293,7 @@ class ProjectAnalyzer:
             import_patterns = [
                 r'import.*from\s+[\'"]([^\'"]+)[\'"]',
                 r'require\([\'"]([^\'"]+)[\'"]\)',
-                r'import\([\'"]([^\'"]+)[\'"]\)'
+                r'import\([\'"]([^\'"]+)[\'"]\)',
             ]
             for pattern in import_patterns:
                 matches = re.findall(pattern, content)
@@ -274,7 +301,7 @@ class ProjectAnalyzer:
 
         elif extension == ".java":
             # Java imports
-            import_pattern = r'import\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)'
+            import_pattern = r"import\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)"
             matches = re.findall(import_pattern, content)
             dependencies.extend(matches)
 
@@ -306,18 +333,36 @@ class ProjectAnalyzer:
             "graph_stats": {
                 "total_files_with_deps": len(self.import_graph),
                 "total_internal_deps": sum(len(v) for v in internal_deps.values()),
-                "total_external_deps": sum(len(v) for v in external_deps.values())
-            }
+                "total_external_deps": sum(len(v) for v in external_deps.values()),
+            },
         }
 
     def _is_internal_dependency(self, dep: str) -> bool:
         """Check if dependency is internal to the project."""
         # Simple heuristic - if it doesn't start with common external library patterns
         external_patterns = [
-            "os", "sys", "json", "re", "datetime", "collections",
-            "itertools", "functools", "operator", "pathlib", "typing",
-            "react", "vue", "angular", "lodash", "moment", "axios",
-            "numpy", "pandas", "scipy", "matplotlib", "sklearn"
+            "os",
+            "sys",
+            "json",
+            "re",
+            "datetime",
+            "collections",
+            "itertools",
+            "functools",
+            "operator",
+            "pathlib",
+            "typing",
+            "react",
+            "vue",
+            "angular",
+            "lodash",
+            "moment",
+            "axios",
+            "numpy",
+            "pandas",
+            "scipy",
+            "matplotlib",
+            "sklearn",
         ]
 
         dep_lower = dep.lower()
@@ -333,27 +378,25 @@ class ProjectAnalyzer:
 
     def _analyze_project_structure(self) -> Dict[str, Any]:
         """Analyze project structure and patterns."""
-        structure = {
-            "type": "unknown",
-            "frameworks": [],
-            "patterns": [],
-            "directories": {}
-        }
+        structure = {"type": "unknown", "frameworks": [], "patterns": [], "directories": {}}
 
         # Detect project type
         if (self.root_path / "package.json").exists():
             structure["type"] = "node.js"
             try:
-                with open(self.root_path / "package.json", 'r') as f:
+                with open(self.root_path / "package.json", "r") as f:
                     package_data = json.load(f)
                     structure["frameworks"] = [
-                        dep for dep in package_data.get("dependencies", {}).keys()
+                        dep
+                        for dep in package_data.get("dependencies", {}).keys()
                         if any(fw in dep for fw in ["react", "vue", "angular", "express", "next"])
                     ]
-            except:
+            except (FileNotFoundError, json.JSONDecodeError):
                 pass
 
-        elif (self.root_path / "requirements.txt").exists() or (self.root_path / "pyproject.toml").exists():
+        elif (self.root_path / "requirements.txt").exists() or (
+            self.root_path / "pyproject.toml"
+        ).exists():
             structure["type"] = "python"
 
         elif (self.root_path / "pom.xml").exists():
@@ -367,7 +410,7 @@ class ProjectAnalyzer:
             if item.is_dir() and not self._should_ignore_file(item):
                 structure["directories"][item.name] = {
                     "file_count": len(list(item.rglob("*"))),
-                    "purpose": self._infer_directory_purpose(item.name)
+                    "purpose": self._infer_directory_purpose(item.name),
                 }
 
         # Detect common patterns
@@ -399,7 +442,7 @@ class ProjectAnalyzer:
             "__pycache__": "Python cache",
             ".git": "Git repository",
             "examples": "Example code",
-            "samples": "Sample code"
+            "samples": "Sample code",
         }
 
         return purposes.get(dir_name.lower(), "Unknown")
@@ -410,10 +453,18 @@ class ProjectAnalyzer:
 
         # Check for common configuration files
         config_files = [
-            "package.json", "requirements.txt", "pyproject.toml",
-            "Dockerfile", "docker-compose.yml", "Makefile",
-            "tsconfig.json", "webpack.config.js", ".eslintrc.js",
-            "pom.xml", "build.gradle", "Cargo.toml"
+            "package.json",
+            "requirements.txt",
+            "pyproject.toml",
+            "Dockerfile",
+            "docker-compose.yml",
+            "Makefile",
+            "tsconfig.json",
+            "webpack.config.js",
+            ".eslintrc.js",
+            "pom.xml",
+            "build.gradle",
+            "Cargo.toml",
         ]
 
         for config_file in config_files:
@@ -444,7 +495,7 @@ class ProjectAnalyzer:
             "avg_file_size": 0,
             "largest_files": [],
             "most_complex_files": [],
-            "language_distribution": {}
+            "language_distribution": {},
         }
 
         if not self.file_cache:
@@ -460,7 +511,9 @@ class ProjectAnalyzer:
             file_sizes.append((file_path, size))
 
             language = file_info.get("language", "Unknown")
-            metrics["language_distribution"][language] = metrics["language_distribution"].get(language, 0) + 1
+            metrics["language_distribution"][language] = (
+                metrics["language_distribution"].get(language, 0) + 1
+            )
 
         metrics["total_lines"] = total_lines
         metrics["avg_file_size"] = total_lines // len(self.file_cache) if self.file_cache else 0
@@ -478,20 +531,28 @@ class ProjectAnalyzer:
 
         # Language diversity
         if len(analysis["languages"]) > 5:
-            recommendations.append("Project uses many languages - consider standardizing tech stack")
+            recommendations.append(
+                "Project uses many languages - consider standardizing tech stack"
+            )
 
         # Test coverage check
-        has_tests = any("test" in dir_name.lower() for dir_name in analysis["structure"].get("directories", {}))
+        has_tests = any(
+            "test" in dir_name.lower() for dir_name in analysis["structure"].get("directories", {})
+        )
         if not has_tests and analysis["file_count"] > 10:
             recommendations.append("Consider adding test files and test directory")
 
         # Documentation check
-        has_docs = any("doc" in dir_name.lower() for dir_name in analysis["structure"].get("directories", {}))
+        has_docs = any(
+            "doc" in dir_name.lower() for dir_name in analysis["structure"].get("directories", {})
+        )
         if not has_docs:
             recommendations.append("Consider adding documentation")
 
         # Configuration management
         if analysis["structure"]["type"] == "unknown":
-            recommendations.append("Consider adding configuration files for better project management")
+            recommendations.append(
+                "Consider adding configuration files for better project management"
+            )
 
         return recommendations

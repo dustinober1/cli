@@ -1,7 +1,8 @@
 """Debugging and code analysis slash commands."""
 
 from typing import List
-from ..base import SlashCommand, CommandContext
+
+from ..base import CommandContext, SlashCommand
 
 
 class FixCommand(SlashCommand):
@@ -12,12 +13,15 @@ class FixCommand(SlashCommand):
             name="fix",
             description="Fix code errors and bugs",
             aliases=["repair", "solve"],
-            category="debug"
+            category="debug",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
         if not args:
-            return "Usage: /fix <filename_or_error>. Fix errors in the specified file or fix the described error."
+            return (
+                "Usage: /fix <filename_or_error>. "
+                "Fix errors in the specified file or fix the described error."
+            )
 
         target = " ".join(args)
         return f"FixCommand not yet implemented for: {target}"
@@ -31,7 +35,7 @@ class DebugCommand(SlashCommand):
             name="debug",
             description="Debug problematic code",
             aliases=["debug-code"],
-            category="debug"
+            category="debug",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -53,7 +57,7 @@ class ReviewCommand(SlashCommand):
             name="review",
             description="Code review and suggestions",
             aliases=["analyze", "audit"],
-            category="debug"
+            category="debug",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -75,7 +79,7 @@ class LintCommand(SlashCommand):
             name="lint",
             description="Run linting and fix issues",
             aliases=["lint-code"],
-            category="debug"
+            category="debug",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -91,7 +95,7 @@ class AnalyzeCommand(SlashCommand):
             name="analyze",
             description="Deep code analysis",
             aliases=["deep-analyze"],
-            category="debug"
+            category="debug",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -113,7 +117,7 @@ class OptimizeCommand(SlashCommand):
             name="optimize",
             description="Performance optimization",
             aliases=["perf", "performance"],
-            category="debug"
+            category="debug",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -135,7 +139,7 @@ class SecurityCommand(SlashCommand):
             name="security",
             description="Security vulnerability scan",
             aliases=["sec", "vulnerability"],
-            category="debug"
+            category="debug",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -154,10 +158,7 @@ class MemoryCommand(SlashCommand):
 
     def __init__(self):
         super().__init__(
-            name="memory",
-            description="Analyze memory usage",
-            aliases=["mem"],
-            category="debug"
+            name="memory", description="Analyze memory usage", aliases=["mem"], category="debug"
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:

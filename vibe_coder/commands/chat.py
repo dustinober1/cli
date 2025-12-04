@@ -12,11 +12,11 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.text import Text
 
 from vibe_coder.api.factory import ClientFactory
-from vibe_coder.config.manager import config_manager
-from vibe_coder.types.api import ApiMessage, MessageRole
-from vibe_coder.commands.slash.registry import command_registry
 from vibe_coder.commands.slash.base import CommandContext
 from vibe_coder.commands.slash.git_ops import GitOperations
+from vibe_coder.commands.slash.registry import command_registry
+from vibe_coder.config.manager import config_manager
+from vibe_coder.types.api import ApiMessage, MessageRole
 
 
 class ChatCommand:
@@ -38,12 +38,10 @@ class ChatCommand:
         # Import all commands to register them
         try:
             # Import command modules to register them
-            import vibe_coder.commands.slash.commands.system
-            import vibe_coder.commands.slash.commands.code
-            import vibe_coder.commands.slash.commands.debug
-            import vibe_coder.commands.slash.commands.test
-            import vibe_coder.commands.slash.commands.git
-            import vibe_coder.commands.slash.commands.project
+            import vibe_coder.commands.slash.commands.code  # noqa: F401
+            import vibe_coder.commands.slash.commands.debug  # noqa: F401
+            import vibe_coder.commands.slash.commands.git  # noqa: F401
+            import vibe_coder.commands.slash.commands.project  # noqa: F401
 
             self.slash_parser = command_registry.get_parser()
 
@@ -54,7 +52,9 @@ class ChatCommand:
                 self.git_info = git_ops.get_git_info()
 
         except Exception as e:
-            self.console.print(f"[yellow]Warning: Failed to initialize slash commands: {e}[/yellow]")
+            self.console.print(
+                f"[yellow]Warning: Failed to initialize slash commands: {e}[/yellow]"
+            )
             self.slash_parser = None
 
     async def run(
@@ -235,7 +235,7 @@ class ChatCommand:
             chat_history=self.messages,
             current_provider=self.provider,
             working_directory=os.getcwd(),
-            git_info=self.git_info
+            git_info=self.git_info,
         )
 
         # Parse and execute the command
@@ -243,11 +243,13 @@ class ChatCommand:
 
         if success:
             # Display the command response
-            self.console.print(Panel(
-                Markdown(response),
-                title="[bold yellow]Command Result[/bold yellow]",
-                border_style="yellow"
-            ))
+            self.console.print(
+                Panel(
+                    Markdown(response),
+                    title="[bold yellow]Command Result[/bold yellow]",
+                    border_style="yellow",
+                )
+            )
 
             # Check if command wants to exit
             parsed = self.slash_parser.parse_command(command)
@@ -297,11 +299,9 @@ class ChatCommand:
         # Use slash command system help if available
         if self.slash_parser:
             help_text = self.slash_parser.get_help_text()
-            self.console.print(Panel(
-                Markdown(help_text),
-                title="📚 Slash Commands",
-                border_style="cyan"
-            ))
+            self.console.print(
+                Panel(Markdown(help_text), title="📚 Slash Commands", border_style="cyan")
+            )
         else:
             # Fallback help
             help_text = Text()

@@ -1,10 +1,8 @@
 """Git integration for slash commands."""
 
-import os
 import subprocess
-import json
-from typing import Dict, List, Optional, Tuple
 from pathlib import Path
+from typing import Dict, List, Optional
 
 
 class GitOperations:
@@ -22,7 +20,7 @@ class GitOperations:
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
             self.git_dir = Path(result.stdout.strip())
             return True
@@ -46,7 +44,7 @@ class GitOperations:
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
             info["current_branch"] = result.stdout.strip()
         except subprocess.CalledProcessError:
@@ -59,14 +57,14 @@ class GitOperations:
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
             remotes = {}
-            for line in result.stdout.strip().split('\n'):
+            for line in result.stdout.strip().split("\n"):
                 if line:
-                    parts = line.split('\t')
+                    parts = line.split("\t")
                     name = parts[0]
-                    url = parts[1].split(' ')[0]
+                    url = parts[1].split(" ")[0]
                     remotes[name] = url
             info["remotes"] = remotes
         except subprocess.CalledProcessError:
@@ -79,16 +77,16 @@ class GitOperations:
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
-            parts = result.stdout.strip().split('|')
+            parts = result.stdout.strip().split("|")
             if len(parts) >= 5:
                 info["last_commit"] = {
                     "hash": parts[0],
                     "author": parts[1],
                     "email": parts[2],
                     "date": parts[3],
-                    "message": parts[4]
+                    "message": parts[4],
                 }
         except subprocess.CalledProcessError:
             info["last_commit"] = {}
@@ -107,10 +105,10 @@ class GitOperations:
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
 
-            lines = result.stdout.strip().split('\n')
+            lines = result.stdout.strip().split("\n")
             status = {
                 "branch": "unknown",
                 "ahead": 0,
@@ -120,21 +118,21 @@ class GitOperations:
                 "untracked": [],
                 "renamed": [],
                 "deleted": [],
-                "conflicts": []
+                "conflicts": [],
             }
 
             for line in lines:
                 if line.startswith("# branch.oid "):
-                    status["commit"] = line.split(' ')[2]
+                    status["commit"] = line.split(" ")[2]
                 elif line.startswith("# branch.head "):
-                    status["branch"] = line.split(' ')[2]
+                    status["branch"] = line.split(" ")[2]
                 elif line.startswith("# branch.ab "):
-                    parts = line.split(' ')
+                    parts = line.split(" ")
                     if len(parts) >= 4:
                         status["ahead"] = int(parts[2][1:])
                         status["behind"] = int(parts[3][1:])
-                elif line and not line.startswith('#'):
-                    parts = line.split(' ')
+                elif line and not line.startswith("#"):
+                    parts = line.split(" ")
                     if len(parts) >= 3:
                         change_type = parts[1]
                         file_path = parts[2]
@@ -148,7 +146,9 @@ class GitOperations:
                         elif change_type == "??":
                             status["untracked"].append(file_path)
                         elif change_type == "R":
-                            status["renamed"].append(f"{file_path} -> {parts[3] if len(parts) > 3 else 'unknown'}")
+                            status["renamed"].append(
+                                f"{file_path} -> {parts[3] if len(parts) > 3 else 'unknown'}"
+                            )
                         elif change_type == "U" or "U" in parts[0]:
                             status["conflicts"].append(file_path)
 
@@ -170,11 +170,7 @@ class GitOperations:
                 cmd.append(filepath)
 
             result = subprocess.run(
-                cmd,
-                cwd=self.repo_path,
-                capture_output=True,
-                text=True,
-                check=True
+                cmd, cwd=self.repo_path, capture_output=True, text=True, check=True
             )
 
             return result.stdout
@@ -182,7 +178,9 @@ class GitOperations:
         except subprocess.CalledProcessError as e:
             return f"Git diff failed: {e.stderr}"
 
-    async def get_log(self, max_count: int = 10, filepath: Optional[str] = None) -> List[Dict[str, str]]:
+    async def get_log(
+        self, max_count: int = 10, filepath: Optional[str] = None
+    ) -> List[Dict[str, str]]:
         """Get commit history."""
         if not self.is_git_repo():
             return []
@@ -194,24 +192,22 @@ class GitOperations:
                 cmd.append(filepath)
 
             result = subprocess.run(
-                cmd,
-                cwd=self.repo_path,
-                capture_output=True,
-                text=True,
-                check=True
+                cmd, cwd=self.repo_path, capture_output=True, text=True, check=True
             )
 
             commits = []
-            for line in result.stdout.strip().split('\n'):
+            for line in result.stdout.strip().split("\n"):
                 if line:
-                    parts = line.split('|')
+                    parts = line.split("|")
                     if len(parts) >= 4:
-                        commits.append({
-                            "hash": parts[0],
-                            "author": parts[1],
-                            "date": parts[2],
-                            "message": parts[3]
-                        })
+                        commits.append(
+                            {
+                                "hash": parts[0],
+                                "author": parts[1],
+                                "date": parts[2],
+                                "message": parts[3],
+                            }
+                        )
 
             return commits
 
@@ -225,10 +221,7 @@ class GitOperations:
 
         try:
             subprocess.run(
-                ["git", "add", filepath],
-                cwd=self.repo_path,
-                check=True,
-                capture_output=True
+                ["git", "add", filepath], cwd=self.repo_path, check=True, capture_output=True
             )
             return True
         except subprocess.CalledProcessError:
@@ -244,7 +237,7 @@ class GitOperations:
                 ["git", "commit", "-m", message],
                 cwd=self.repo_path,
                 check=True,
-                capture_output=True
+                capture_output=True,
             )
             return True
         except subprocess.CalledProcessError:
@@ -261,14 +254,14 @@ class GitOperations:
                     ["git", "checkout", "-b", branch_name],
                     cwd=self.repo_path,
                     check=True,
-                    capture_output=True
+                    capture_output=True,
                 )
             else:
                 subprocess.run(
                     ["git", "branch", branch_name],
                     cwd=self.repo_path,
                     check=True,
-                    capture_output=True
+                    capture_output=True,
                 )
             return True
         except subprocess.CalledProcessError:
@@ -284,7 +277,7 @@ class GitOperations:
                 ["git", "checkout", branch_name],
                 cwd=self.repo_path,
                 check=True,
-                capture_output=True
+                capture_output=True,
             )
             return True
         except subprocess.CalledProcessError:
@@ -302,9 +295,11 @@ class GitOperations:
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
-            local_branches = [b.strip("'") for b in result.stdout.strip().split('\n') if b.strip("'")]
+            local_branches = [
+                b.strip("'") for b in result.stdout.strip().split("\n") if b.strip("'")
+            ]
 
             # Get remote branches
             result = subprocess.run(
@@ -312,14 +307,13 @@ class GitOperations:
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
-            remote_branches = [b.strip("'") for b in result.stdout.strip().split('\n') if b.strip("'")]
+            remote_branches = [
+                b.strip("'") for b in result.stdout.strip().split("\n") if b.strip("'")
+            ]
 
-            return {
-                "local": local_branches,
-                "remote": remote_branches
-            }
+            return {"local": local_branches, "remote": remote_branches}
 
         except subprocess.CalledProcessError:
             return {"local": [], "remote": []}
@@ -335,39 +329,41 @@ class GitOperations:
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
 
             blame_info = []
             current_commit = {}
 
-            for line in result.stdout.split('\n'):
-                if line.startswith('\t'):
+            for line in result.stdout.split("\n"):
+                if line.startswith("\t"):
                     # This is a code line
                     if current_commit:
-                        blame_info.append({
-                            "commit": current_commit.get("hash", ""),
-                            "author": current_commit.get("author", ""),
-                            "date": current_commit.get("date", ""),
-                            "line": line[1:]  # Remove the tab
-                        })
+                        blame_info.append(
+                            {
+                                "commit": current_commit.get("hash", ""),
+                                "author": current_commit.get("author", ""),
+                                "date": current_commit.get("date", ""),
+                                "line": line[1:],  # Remove the tab
+                            }
+                        )
                         current_commit = {}
                 else:
                     # Parse blame metadata
-                    if line.startswith('author '):
+                    if line.startswith("author "):
                         current_commit["author"] = line[7:]
-                    elif line.startswith('author-mail '):
+                    elif line.startswith("author-mail "):
                         current_commit["email"] = line[12:]
-                    elif line.startswith('author-time '):
+                    elif line.startswith("author-time "):
                         current_commit["timestamp"] = line[12:]
-                    elif line.startswith('author-tz '):
+                    elif line.startswith("author-tz "):
                         current_commit["timezone"] = line[10:]
-                    elif line.startswith('summary '):
+                    elif line.startswith("summary "):
                         current_commit["summary"] = line[8:]
-                    elif not line.startswith('filename ') and ' ' in line:
+                    elif not line.startswith("filename ") and " " in line:
                         # Likely the commit hash and other metadata
-                        parts = line.split(' ')
-                        if parts[0].startswith('0'):  # Commit hash
+                        parts = line.split(" ")
+                        if parts[0].startswith("0"):  # Commit hash
                             current_commit["hash"] = parts[0]
 
             return blame_info
@@ -382,9 +378,12 @@ class GitOperations:
             return []
 
         try:
-            with open(gitignore_path, 'r', encoding='utf-8') as f:
-                return [line.strip() for line in f.readlines()
-                       if line.strip() and not line.startswith('#')]
+            with open(gitignore_path, "r", encoding="utf-8") as f:
+                return [
+                    line.strip()
+                    for line in f.readlines()
+                    if line.strip() and not line.startswith("#")
+                ]
         except Exception:
             return []
 
@@ -398,7 +397,7 @@ class GitOperations:
                 ["git", "check-ignore", filepath],
                 cwd=self.repo_path,
                 capture_output=True,
-                text=True
+                text=True,
             )
             return result.returncode == 0
         except (subprocess.CalledProcessError, FileNotFoundError):
@@ -415,14 +414,10 @@ class GitOperations:
                 cmd.append(since_commit)
 
             result = subprocess.run(
-                cmd,
-                cwd=self.repo_path,
-                capture_output=True,
-                text=True,
-                check=True
+                cmd, cwd=self.repo_path, capture_output=True, text=True, check=True
             )
 
-            return [f.strip() for f in result.stdout.split('\n') if f.strip()]
+            return [f.strip() for f in result.stdout.split("\n") if f.strip()]
 
         except subprocess.CalledProcessError:
             return []

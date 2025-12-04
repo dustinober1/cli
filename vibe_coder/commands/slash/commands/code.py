@@ -1,7 +1,8 @@
 """Code generation slash commands."""
 
 from typing import List
-from ..base import SlashCommand, CommandContext
+
+from ..base import CommandContext, SlashCommand
 from ..file_ops import FileOperations
 
 
@@ -13,7 +14,7 @@ class CodeCommand(SlashCommand):
             name="code",
             description="Generate code from natural language description",
             aliases=["generate", "gen"],
-            category="code"
+            category="code",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -46,7 +47,7 @@ class FileCommand(SlashCommand):
             name="file",
             description="Generate code in a specific file",
             aliases=["create-file", "new-file"],
-            category="code"
+            category="code",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -60,7 +61,11 @@ class FileCommand(SlashCommand):
 
         try:
             # This would call AI to generate code for the file
-            generated_code = f"# Generated code for: {prompt}\n# File: {filename}\n\n# Implementation placeholder\n"
+            generated_code = (
+                f"# Generated code for: {prompt}\n"
+                f"# File: {filename}\n\n"
+                "# Implementation placeholder\n"
+            )
 
             await file_ops.write_file(filename, generated_code)
             return f"Code generated and saved to: {filename}"
@@ -80,7 +85,7 @@ class FunctionCommand(SlashCommand):
             name="function",
             description="Generate a function with documentation",
             aliases=["func", "def"],
-            category="code"
+            category="code",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -119,7 +124,7 @@ class ClassCommand(SlashCommand):
             name="class",
             description="Generate a class with methods",
             aliases=["cls"],
-            category="code"
+            category="code",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -163,7 +168,7 @@ class CompleteCommand(SlashCommand):
             name="complete",
             description="Complete partial code snippets",
             aliases=["comp", "finish"],
-            category="code"
+            category="code",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -193,7 +198,7 @@ class RefactorCommand(SlashCommand):
             name="refactor",
             description="Refactor and optimize existing code",
             aliases=["optimize", "improve"],
-            category="code"
+            category="code",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -243,7 +248,7 @@ class ExplainCommand(SlashCommand):
             name="explain",
             description="Explain what code does",
             aliases=["exp", "wtf"],
-            category="code"
+            category="code",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -303,7 +308,7 @@ class DocsCommand(SlashCommand):
             name="docs",
             description="Generate documentation for code",
             aliases=["documentation", "docstring"],
-            category="code"
+            category="code",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -362,7 +367,7 @@ class TypesCommand(SlashCommand):
             name="types",
             description="Add type hints to existing code",
             aliases=["type-hints", "typing"],
-            category="code"
+            category="code",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -370,33 +375,28 @@ class TypesCommand(SlashCommand):
             return "Usage: /types <filename>. Add type hints to the specified Python file."
 
         filename = args[0]
-        file_ops = FileOperations(context.working_directory)
 
         try:
-            content = await file_ops.read_file(filename)
-
             # Check if it's a Python file
-            if not filename.endswith('.py'):
-                return f"Type hints are currently only supported for Python files."
+            if not filename.endswith(".py"):
+                return "Type hints are currently only supported for Python files."
 
             # This would call AI to add type hints
-            return f"""Adding type hints to {filename}...
-
-Analysis:
-- Functions without type hints: [placeholder count]
-- Variables without type hints: [placeholder count]
-- Return types to add: [placeholder count]
-
-AI would analyze the code and add appropriate type hints like:
-```python
-from typing import List, Dict, Optional
-
-def example_function(param1: str, param2: int) -> bool:
-    """Example with type hints added."""
-    return True
-```
-
-Note: Actual type hint generation will be implemented with AI integration."""
+            return (
+                f"Adding type hints to {filename}...\n\n"
+                "Analysis:\n"
+                "- Functions without type hints: [placeholder count]\n"
+                "- Variables without type hints: [placeholder count]\n"
+                "- Return types to add: [placeholder count]\n\n"
+                "AI would analyze the code and add appropriate type hints like:\n"
+                "```python\n"
+                "from typing import List, Dict, Optional\n\n"
+                "def example_function(param1: str, param2: int) -> bool:\n"
+                "    '''Example with type hints added.'''\n"
+                "    return True\n"
+                "```\n\n"
+                "Note: Actual type hint generation will be implemented with AI integration."
+            )
 
         except FileNotFoundError:
             return f"File not found: {filename}"

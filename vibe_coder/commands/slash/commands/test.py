@@ -1,7 +1,8 @@
 """Testing slash commands."""
 
 from typing import List
-from ..base import SlashCommand, CommandContext
+
+from ..base import CommandContext, SlashCommand
 
 
 class TestCommand(SlashCommand):
@@ -12,7 +13,7 @@ class TestCommand(SlashCommand):
             name="test",
             description="Generate unit tests for existing code",
             aliases=["test-gen", "generate-test"],
-            category="test"
+            category="test",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -34,7 +35,7 @@ class TestRunCommand(SlashCommand):
             name="test-run",
             description="Run tests and fix failures",
             aliases=["run-test", "execute-test"],
-            category="test"
+            category="test",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -50,7 +51,7 @@ class TestCoverageCommand(SlashCommand):
             name="test-coverage",
             description="Generate coverage report",
             aliases=["coverage", "cov"],
-            category="test"
+            category="test",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -62,10 +63,7 @@ class TestMockCommand(SlashCommand):
 
     def __init__(self):
         super().__init__(
-            name="test-mock",
-            description="Create mock objects",
-            aliases=["mock"],
-            category="test"
+            name="test-mock", description="Create mock objects", aliases=["mock"], category="test"
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -87,7 +85,7 @@ class TestIntegrationCommand(SlashCommand):
             name="test-integration",
             description="Integration test generation",
             aliases=["integration-test"],
-            category="test"
+            category="test",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -109,7 +107,7 @@ class BenchmarkCommand(SlashCommand):
             name="benchmark",
             description="Performance benchmarking",
             aliases=["bench", "perf-test"],
-            category="test"
+            category="test",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:

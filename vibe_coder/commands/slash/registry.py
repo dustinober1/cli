@@ -1,6 +1,6 @@
 """Command registry for slash commands."""
 
-from typing import Dict, List, Optional
+from typing import List
 
 from .base import SlashCommand
 from .parser import SlashCommandParser

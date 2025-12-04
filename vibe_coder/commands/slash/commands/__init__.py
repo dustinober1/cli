@@ -5,11 +5,11 @@ This package contains all the individual slash commands organized by category.
 """
 
 # Import all command modules to register them
-from .system import *
-from .code import *
-from .debug import *
-from .test import *
-from .git import *
-from .project import *
+from . import code  # noqa: F401
+from . import debug  # noqa: F401
+from . import git  # noqa: F401
+from . import project  # noqa: F401
+from . import system  # noqa: F401
+from . import test  # noqa: F401
 
 __all__ = []

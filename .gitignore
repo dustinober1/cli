@@ -50,3 +50,6 @@ Thumbs.db
 .vibe/
 *.log
 poetry.lock
+
+# Temporary Claude Code files
+2025-*-caveat-the-messages-below-were-generated-by-the-u.txt

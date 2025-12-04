@@ -1,10 +1,11 @@
 """Tests for slash command parser."""
 
-import pytest
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 
+import pytest
+
+from vibe_coder.commands.slash.base import CommandContext, SlashCommand
 from vibe_coder.commands.slash.parser import SlashCommandParser
-from vibe_coder.commands.slash.base import SlashCommand, CommandContext
 from vibe_coder.types.api import ApiMessage, MessageRole
 from vibe_coder.types.config import AIProvider
 
@@ -36,7 +37,7 @@ def mock_provider():
         api_key="test-key",
         endpoint="https://api.test.com",
         model="test-model",
-        temperature=0.7
+        temperature=0.7,
     )
 
 
@@ -47,7 +48,7 @@ def mock_context(mock_provider):
         chat_history=[ApiMessage(role=MessageRole.USER, content="test")],
         current_provider=mock_provider,
         working_directory="/test/dir",
-        git_info=None
+        git_info=None,
     )
 
 
@@ -201,7 +202,10 @@ class TestSlashCommandParser:
     async def test_parse_and_execute_custom_validation(self, parser, mock_context):
         """Test command with custom validation."""
         command = MockCommand("test")
-        command.validate_args = lambda args: (args[0].isdigit() if args else False, "First arg must be number")
+        command.validate_args = lambda args: (
+            args[0].isdigit() if args else False,
+            "First arg must be number",
+        )
         parser.register_command(command)
 
         # Test with invalid argument
@@ -277,7 +281,9 @@ class TestSlashCommandParser:
     def test_get_help_text_general(self, parser):
         """Test getting general help text."""
         parser.register_command(MockCommand("help", "Show help", category="system"))
-        parser.register_command(MockCommand("test", "Test command", aliases=["t"], category="debug"))
+        parser.register_command(
+            MockCommand("test", "Test command", aliases=["t"], category="debug")
+        )
 
         help_text = parser.get_help_text()
 

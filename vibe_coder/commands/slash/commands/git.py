@@ -1,7 +1,8 @@
 """Git integration slash commands."""
 
 from typing import List
-from ..base import SlashCommand, CommandContext
+
+from ..base import CommandContext, SlashCommand
 from ..git_ops import GitOperations
 
 
@@ -13,7 +14,7 @@ class GitStatusCommand(SlashCommand):
             name="git-status",
             description="Show git status with AI insights",
             aliases=["gst", "status"],
-            category="git"
+            category="git",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -72,7 +73,7 @@ class GitCommitCommand(SlashCommand):
             name="git-commit",
             description="Generate smart commit messages",
             aliases=["gc", "commit"],
-            category="git"
+            category="git",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -98,7 +99,10 @@ class GitCommitCommand(SlashCommand):
 
             # This would call AI to generate commit message
             generated_message = await git_ops.generate_commit_message(diff)
-            return f"Generated commit message: {generated_message}\nUse '/git-commit \"{generated_message}\"' to commit."
+            return (
+                f"Generated commit message: {generated_message}\n"
+                f'Use \'/git-commit "{generated_message}"\' to commit.'
+            )
 
 
 class GitDiffCommand(SlashCommand):
@@ -106,10 +110,7 @@ class GitDiffCommand(SlashCommand):
 
     def __init__(self):
         super().__init__(
-            name="git-diff",
-            description="Explain git diff",
-            aliases=["gd", "diff"],
-            category="git"
+            name="git-diff", description="Explain git diff", aliases=["gd", "diff"], category="git"
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -147,7 +148,7 @@ class GitReviewCommand(SlashCommand):
             name="git-review",
             description="Review recent commits",
             aliases=["gr", "review"],
-            category="git"
+            category="git",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -189,7 +190,7 @@ class GitMergeCommand(SlashCommand):
             name="git-merge",
             description="Merge conflict assistance",
             aliases=["merge", "gm"],
-            category="git"
+            category="git",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -199,7 +200,9 @@ class GitMergeCommand(SlashCommand):
             return "This directory is not a Git repository."
 
         if not args:
-            return "Usage: /git-merge <branch_name>. Get assistance with merging the specified branch."
+            return (
+                "Usage: /git-merge <branch_name>. Get assistance with merging the specified branch."
+            )
 
         branch_name = args[0]
 
@@ -234,7 +237,7 @@ class GitBranchCommand(SlashCommand):
             name="git-branch",
             description="Create and switch branches",
             aliases=["branch", "gb"],
-            category="git"
+            category="git",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:

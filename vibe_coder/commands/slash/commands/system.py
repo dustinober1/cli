@@ -1,7 +1,8 @@
 """System and utility slash commands."""
 
 from typing import List
-from ..base import SlashCommand, CommandContext
+
+from ..base import CommandContext, SlashCommand
 from ..registry import command_registry
 
 
@@ -13,7 +14,7 @@ class HelpCommand(SlashCommand):
             name="help",
             description="Show help information for commands",
             aliases=["h", "?"],
-            category="system"
+            category="system",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -23,7 +24,7 @@ class HelpCommand(SlashCommand):
 
         if args:
             # Show help for specific command
-            command_name = args[0].lstrip('/')
+            command_name = args[0].lstrip("/")
             help_text = parser.get_help_text(command_name)
         else:
             # Show general help
@@ -43,7 +44,7 @@ class ClearCommand(SlashCommand):
             name="clear",
             description="Clear conversation history",
             aliases=["cls"],
-            category="system"
+            category="system",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -60,7 +61,7 @@ class ExitCommand(SlashCommand):
             name="exit",
             description="Exit the application",
             aliases=["quit", "q"],
-            category="system"
+            category="system",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -77,7 +78,7 @@ class SettingsCommand(SlashCommand):
             name="settings",
             description="Show current configuration settings",
             aliases=["config", "cfg"],
-            category="system"
+            category="system",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -108,7 +109,7 @@ class StatsCommand(SlashCommand):
             name="stats",
             description="Show usage statistics",
             aliases=["statistics"],
-            category="system"
+            category="system",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -130,15 +131,15 @@ class ProviderCommand(SlashCommand):
 
     def __init__(self):
         super().__init__(
-            name="provider",
-            description="Switch AI provider",
-            aliases=["switch"],
-            category="system"
+            name="provider", description="Switch AI provider", aliases=["switch"], category="system"
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
         if not args:
-            return "Usage: /provider <provider_name>. Available providers can be listed with /config list"
+            return (
+                "Usage: /provider <provider_name>. "
+                "Available providers can be listed with /config list"
+            )
 
         provider_name = args[0]
         # This would switch the provider
@@ -154,15 +155,15 @@ class ModelCommand(SlashCommand):
 
     def __init__(self):
         super().__init__(
-            name="model",
-            description="Change AI model",
-            aliases=["model-switch"],
-            category="system"
+            name="model", description="Change AI model", aliases=["model-switch"], category="system"
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
         if not args:
-            return f"Current model: {context.current_provider.model or 'Default'}\nUsage: /model <model_name>"
+            return (
+                f"Current model: {context.current_provider.model or 'Default'}\n"
+                "Usage: /model <model_name>"
+            )
 
         model_name = args[0]
         # This would change the model
@@ -181,12 +182,15 @@ class TemperatureCommand(SlashCommand):
             name="temperature",
             description="Adjust AI response temperature",
             aliases=["temp"],
-            category="system"
+            category="system",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
         if not args:
-            return f"Current temperature: {context.current_provider.temperature}\nUsage: /temperature <value> (0.0-2.0)"
+            return (
+                f"Current temperature: {context.current_provider.temperature}\n"
+                "Usage: /temperature <value> (0.0-2.0)"
+            )
 
         try:
             temperature = float(args[0])
@@ -224,7 +228,7 @@ class SaveCommand(SlashCommand):
             name="save",
             description="Save conversation to file",
             aliases=["export-conversation"],
-            category="system"
+            category="system",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -232,8 +236,8 @@ class SaveCommand(SlashCommand):
             return "Usage: /save <filename>. Saves the conversation history to a file."
 
         filename = args[0]
-        if not filename.endswith(('.md', '.txt', '.json')):
-            filename += '.md'
+        if not filename.endswith((".md", ".txt", ".json")):
+            filename += ".md"
 
         try:
             # This would save the conversation to a file
@@ -254,7 +258,7 @@ class ExportCommand(SlashCommand):
             name="export",
             description="Export chat history in various formats",
             aliases=["backup"],
-            category="system"
+            category="system",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:

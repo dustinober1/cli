@@ -1,9 +1,10 @@
 """Tests for file operations utilities."""
 
-import pytest
-import tempfile
 import shutil
+import tempfile
 from pathlib import Path
+
+import pytest
 
 from vibe_coder.commands.slash.file_ops import FileOperations
 
@@ -117,11 +118,11 @@ hello_world()
     async def test_analyze_file_binary(self, file_ops):
         """Test analyzing a binary file."""
         filename = "test.bin"
-        binary_content = b'\x00\x01\x02\x03\x04\x05'
+        binary_content = b"\x00\x01\x02\x03\x04\x05"
 
         # Write binary content directly
         file_path = file_ops.get_absolute_path(filename)
-        with open(file_path, 'wb') as f:
+        with open(file_path, "wb") as f:
             f.write(binary_content)
 
         analysis = file_ops.analyze_file(filename)
@@ -164,13 +165,19 @@ hello_world()
     def test_is_text_file(self, file_ops):
         """Test text file detection."""
         text_files = [
-            "test.py", "test.js", "test.ts", "test.html", "test.css",
-            "test.json", "test.md", "test.yaml", "test.txt", "test.csv"
+            "test.py",
+            "test.js",
+            "test.ts",
+            "test.html",
+            "test.css",
+            "test.json",
+            "test.md",
+            "test.yaml",
+            "test.txt",
+            "test.csv",
         ]
 
-        binary_files = [
-            "test.png", "test.jpg", "test.mp3", "test.mp4", "test.zip"
-        ]
+        binary_files = ["test.png", "test.jpg", "test.mp3", "test.mp4", "test.zip"]
 
         for filename in text_files:
             path = Path(filename)
@@ -225,12 +232,7 @@ hello_world()
         # Create test structure
         structure = {
             "root.txt": "root file",
-            "subdir/": {
-                "nested.txt": "nested file",
-                "deep/": {
-                    "deepest.txt": "deepest file"
-                }
-            }
+            "subdir/": {"nested.txt": "nested file", "deep/": {"deepest.txt": "deepest file"}},
         }
 
         def create_structure(base_path, structure):
@@ -302,13 +304,13 @@ if __name__ == "__main__":
 
         assert analysis["classes"] == 1
         assert analysis["functions"] >= 2  # main and static_method
-        assert analysis["imports"] >= 2   # os and sys
+        assert analysis["imports"] >= 2  # os and sys
         assert analysis["comments"] >= 1
         assert analysis["docstrings"] >= 2
 
     def test_analyze_code_file_javascript(self, file_ops):
         """Test JavaScript code analysis."""
-        code = '''
+        code = """
 import React from 'react';
 import { useState } from 'hooks';
 
@@ -328,7 +330,7 @@ const testFunction = () => {
 };
 
 export default testFunction;
-'''
+"""
 
         lines = code.splitlines()
         analysis = file_ops._analyze_javascript_code(code, lines)

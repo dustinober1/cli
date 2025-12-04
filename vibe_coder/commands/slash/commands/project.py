@@ -1,7 +1,8 @@
 """Project management slash commands."""
 
 from typing import List
-from ..base import SlashCommand, CommandContext
+
+from ..base import CommandContext, SlashCommand
 from ..project_analyzer import ProjectAnalyzer
 
 
@@ -13,7 +14,7 @@ class ProjectOverviewCommand(SlashCommand):
             name="project-overview",
             description="Analyze project structure",
             aliases=["overview", "project", "po"],
-            category="project"
+            category="project",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -30,22 +31,24 @@ class ProjectOverviewCommand(SlashCommand):
 🏗️  Structure Type: {analysis['structure']['type']}
 """
 
-        if analysis['languages']:
+        if analysis["languages"]:
             result += "\n📝 Languages:\n"
-            for lang, count in sorted(analysis['languages'].items(), key=lambda x: x[1], reverse=True):
+            for lang, count in sorted(
+                analysis["languages"].items(), key=lambda x: x[1], reverse=True
+            ):
                 result += f"  {lang}: {count} files\n"
 
-        if analysis['structure']['frameworks']:
+        if analysis["structure"]["frameworks"]:
             result += f"\n🔧 Frameworks: {', '.join(analysis['structure']['frameworks'])}\n"
 
-        if analysis['potential_issues']:
+        if analysis["potential_issues"]:
             result += f"\n⚠️  Potential Issues ({len(analysis['potential_issues'])}):\n"
-            for issue in analysis['potential_issues'][:3]:
+            for issue in analysis["potential_issues"][:3]:
                 result += f"  • {issue}\n"
 
-        if analysis['recommendations']:
-            result += f"\n💡 Recommendations:\n"
-            for rec in analysis['recommendations']:
+        if analysis["recommendations"]:
+            result += "\n💡 Recommendations:\n"
+            for rec in analysis["recommendations"]:
                 result += f"  • {rec}\n"
 
         return result
@@ -59,7 +62,7 @@ class DependenciesCommand(SlashCommand):
             name="dependencies",
             description="Analyze project dependencies",
             aliases=["deps", "imports"],
-            category="project"
+            category="project",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -86,6 +89,7 @@ class DependenciesCommand(SlashCommand):
             all_deps.extend(file_deps)
 
         from collections import Counter
+
         common_deps = Counter(all_deps).most_common(10)
         if common_deps:
             result += "\nMost common dependencies:\n"
@@ -103,7 +107,7 @@ class ArchitectureCommand(SlashCommand):
             name="architecture",
             description="Generate architecture visualization",
             aliases=["arch", "structure"],
-            category="project"
+            category="project",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -150,12 +154,15 @@ class TasksCommand(SlashCommand):
             name="tasks",
             description="Create task breakdown",
             aliases=["task", "todo"],
-            category="project"
+            category="project",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
         if not args:
-            return "Usage: /tasks <feature_description>. Break down a feature into implementation tasks."
+            return (
+                "Usage: /tasks <feature_description>. "
+                "Break down a feature into implementation tasks."
+            )
 
         feature = " ".join(args)
 
@@ -194,7 +201,7 @@ class PlanningCommand(SlashCommand):
             name="planning",
             description="Feature implementation plan",
             aliases=["plan", "feature-plan"],
-            category="project"
+            category="project",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -240,7 +247,7 @@ class ResearchCommand(SlashCommand):
             name="research",
             description="Research and summarize technical topics",
             aliases=["study", "learn"],
-            category="project"
+            category="project",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -280,7 +287,7 @@ class DependenciesTreeCommand(SlashCommand):
             name="dependency-tree",
             description="Visualize dependency tree",
             aliases=["deptree", "deps-tree"],
-            category="project"
+            category="project",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:

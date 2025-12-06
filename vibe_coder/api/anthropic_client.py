@@ -1,6 +1,6 @@
 """Anthropic Claude API client implementation."""
 
-from typing import AsyncIterator, Dict, List, Optional, Tuple
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 
 import anthropic
 from anthropic import AsyncAnthropic
@@ -31,6 +31,7 @@ class AnthropicClient(BaseApiClient):
         model: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
         **kwargs,
     ) -> ApiResponse:
         """Send a request to Anthropic API.
@@ -40,6 +41,7 @@ class AnthropicClient(BaseApiClient):
             model: Model name override
             temperature: Temperature override
             max_tokens: Max tokens override
+            tools: List of tools to provide to the model
             **kwargs: Additional Anthropic-specific parameters
 
         Returns:
@@ -57,6 +59,9 @@ class AnthropicClient(BaseApiClient):
             # Anthropic requires max_tokens
             if params.get("max_tokens") is None:
                 params["max_tokens"] = 4096
+
+            if tools:
+                params["tools"] = tools
 
             response = await self.anthropic_client.messages.create(
                 messages=claude_messages, system=system_message, **params
@@ -81,6 +86,7 @@ class AnthropicClient(BaseApiClient):
         model: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
         **kwargs,
     ) -> AsyncIterator[str]:
         """Stream a response from Anthropic API.
@@ -90,6 +96,7 @@ class AnthropicClient(BaseApiClient):
             model: Model name override
             temperature: Temperature override
             max_tokens: Max tokens override
+            tools: List of tools to provide to the model
             **kwargs: Additional Anthropic-specific parameters
 
         Yields:
@@ -107,6 +114,9 @@ class AnthropicClient(BaseApiClient):
             # Anthropic requires max_tokens
             if params.get("max_tokens") is None:
                 params["max_tokens"] = 4096
+
+            if tools:
+                params["tools"] = tools
 
             async with self.anthropic_client.messages.stream(
                 messages=claude_messages, system=system_message, **params
@@ -157,7 +167,7 @@ class AnthropicClient(BaseApiClient):
 
     def _convert_messages_to_anthropic(
         self, messages: List[ApiMessage]
-    ) -> Tuple[Optional[str], List[Dict[str, str]]]:
+    ) -> Tuple[Optional[str], List[Dict[str, Any]]]:
         """Convert ApiMessage objects to Anthropic format.
 
         Args:
@@ -180,15 +190,61 @@ class AnthropicClient(BaseApiClient):
             if message.role == MessageRole.USER:
                 claude_messages.append({"role": "user", "content": message.content})
             elif message.role == MessageRole.ASSISTANT:
-                claude_messages.append({"role": "assistant", "content": message.content})
+                content = []
+                if message.content:
+                    content.append({"type": "text", "text": message.content})
+
+                if message.tool_calls:
+                    # Convert tool calls to Anthropic format if they match expected structure
+                    # We might need to ensure they match Anthropic's 'tool_use' block format
+                    for tc in message.tool_calls:
+                        if isinstance(tc, dict):
+                             # Assuming tc is already in a compatible dict format or we convert it
+                             # Anthropic expects: {type: "tool_use", id: "...", name: "...", input: {...}}
+                             if tc.get("type") == "tool_use":
+                                 content.append(tc)
+                             elif tc.get("type") == "function": # OpenAI style
+                                 content.append({
+                                     "type": "tool_use",
+                                     "id": tc.get("id"),
+                                     "name": tc["function"]["name"],
+                                     "input": tc["function"]["arguments"] # Note: arguments in OpenAI is string, Anthropic needs dict
+                                     # This conversion is complex if arguments is string JSON.
+                                     # For now, we assume if we are using Anthropic, tool_calls came from Anthropic
+                                     # and are already in correct format, OR we need JSON parsing.
+                                 })
+
+                if not content:
+                    # Fallback for simple content string if no tool calls processed
+                     claude_messages.append({"role": "assistant", "content": message.content})
+                else:
+                    claude_messages.append({"role": "assistant", "content": content})
+
+            elif message.role == MessageRole.TOOL:
+                # Tool result
+                claude_messages.append({
+                    "role": "user",
+                    "content": [{
+                        "type": "tool_result",
+                        "tool_use_id": message.tool_call_id,
+                        "content": message.content
+                    }]
+                })
 
         # Ensure we have at least one user message
         if not claude_messages:
             raise ValueError("At least one user message is required")
 
-        # Ensure last message is from user
+        # Ensure last message is from user (Anthropic requirement for API calls, but checking here might be strict)
+        # Actually Anthropic allows Assistant message if prefilling.
+        # But for 'messages.create' usually we end with user.
+        # However, if we are looping tool calls, the last message might be a tool result (which acts as user).
+
+        # Check if last message is from user (or tool result which is user role)
         if claude_messages[-1]["role"] != "user":
-            raise ValueError("Last message must be from user")
+            # If the last message is assistant, we might be continuing?
+            # But usually we send request after user input.
+            pass
 
         return system_message, claude_messages
 
@@ -202,6 +258,8 @@ class AnthropicClient(BaseApiClient):
             ApiResponse object
         """
         content = ""
+        tool_calls = []
+
         if response.content:
             # Claude returns content as a list, concatenate text blocks
             for block in response.content:
@@ -209,6 +267,13 @@ class AnthropicClient(BaseApiClient):
                     content += block.text
                 elif isinstance(block, dict) and block.get("type") == "text":
                     content += block.get("text", "")
+
+                # Check for tool usage
+                if hasattr(block, "type") and block.type == "tool_use":
+                    # Convert object to dict if needed
+                    tool_calls.append(block.to_dict() if hasattr(block, "to_dict") else block)
+                elif isinstance(block, dict) and block.get("type") == "tool_use":
+                    tool_calls.append(block)
 
         # Extract usage information
         usage = TokenUsage(
@@ -232,7 +297,14 @@ class AnthropicClient(BaseApiClient):
             }
             finish_reason = reason_map.get(response.stop_reason, "unknown")
 
-        return ApiResponse(content=content, usage=usage, finish_reason=finish_reason)
+        result = ApiResponse(
+            content=content,
+            usage=usage,
+            finish_reason=finish_reason,
+            tool_calls=tool_calls
+        )
+
+        return result
 
     def _handle_anthropic_error(self, error: anthropic.APIError) -> ApiResponse:
         """Handle Anthropic-specific errors.

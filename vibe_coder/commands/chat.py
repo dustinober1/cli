@@ -1,7 +1,7 @@
 """Chat command implementation for Vibe Coder."""
 
 import os
-from typing import List, Optional
+from typing import List, Optional, Any, Dict
 
 import questionary
 from rich.console import Console
@@ -16,6 +16,7 @@ from vibe_coder.commands.slash.base import CommandContext
 from vibe_coder.commands.slash.git_ops import GitOperations
 from vibe_coder.commands.slash.registry import command_registry
 from vibe_coder.config.manager import config_manager
+from vibe_coder.mcp.manager import MCPManager
 from vibe_coder.types.api import ApiMessage, MessageRole
 
 
@@ -29,6 +30,7 @@ class ChatCommand:
         self.provider = None
         self.slash_parser = None
         self.git_info = None
+        self.mcp_manager = MCPManager()
 
         # Initialize slash command system
         self._initialize_slash_commands()
@@ -42,6 +44,9 @@ class ChatCommand:
             import vibe_coder.commands.slash.commands.debug  # noqa: F401
             import vibe_coder.commands.slash.commands.git  # noqa: F401
             import vibe_coder.commands.slash.commands.project  # noqa: F401
+            import vibe_coder.commands.slash.commands.mcp  # noqa: F401
+            import vibe_coder.commands.slash.commands.model  # noqa: F401
+            import vibe_coder.commands.slash.commands.provider  # noqa: F401
 
             self.slash_parser = command_registry.get_parser()
 
@@ -80,6 +85,19 @@ class ChatCommand:
             if not await self._setup_provider(provider_name, model, temperature, max_tokens):
                 return False
 
+            # Connect to MCP servers
+            try:
+                with Progress(
+                    SpinnerColumn(),
+                    TextColumn("[progress.description]{task.description}"),
+                    console=self.console,
+                    transient=True,
+                ) as progress:
+                    progress.add_task("Connecting to MCP servers...", total=None)
+                    await self.mcp_manager.connect_all()
+            except Exception as e:
+                self.console.print(f"[yellow]Warning: Failed to connect to MCP servers: {e}[/yellow]")
+
             # Welcome message
             self._show_welcome()
 
@@ -97,6 +115,7 @@ class ChatCommand:
         finally:
             if self.client:
                 await self.client.close()
+            await self.mcp_manager.close()
 
     async def _setup_provider(
         self,
@@ -403,54 +422,151 @@ class ChatCommand:
             self.console.print(f"[red]Failed to save conversation: {e}[/red]")
 
     async def _get_ai_response(self):
-        """Get and display AI response."""
-        try:
-            # Show progress indicator for non-streaming display
-            with Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                console=self.console,
-                transient=True,
-            ) as progress:
-                progress.add_task("Thinking...", total=None)
+        """Get and display AI response.
 
-                response_chunks = []
-                current_response = ""
+        Handles both regular conversation and tool execution loop.
+        """
+        # Prepare tools
+        tools = await self.mcp_manager.get_all_tools()
 
-                # Create live display for streaming
-                with Live(console=self.console, refresh_per_second=4) as live:
-                    # Start streaming
-                    async for chunk in self.client.stream_request(self.messages):
-                        if chunk:
-                            response_chunks.append(chunk)
-                            current_response += chunk
+        while True:
+            try:
+                # If tools are active, we must prioritize reliability over streaming UX for now
+                # OR we handle streaming and hope to catch tool calls.
+                # Since we refactored clients to handle 'tool_calls' in ApiResponse,
+                # let's use send_request (non-streaming) if tools are present to simplify the loop
+                # and ensure we catch the tool call correctly.
 
-                            # Update the live display
-                            panel = Panel(
-                                Markdown(current_response),
-                                title=f"[bold blue]{self.provider.name}[/bold blue]",
-                                border_style="blue",
-                            )
-                            live.update(panel)
+                use_streaming = not tools
 
-                final_response = "".join(response_chunks)
+                response_content = ""
+                response_tool_calls = None
+
+                if use_streaming:
+                    # Show progress indicator for streaming setup
+                    with Progress(
+                        SpinnerColumn(),
+                        TextColumn("[progress.description]{task.description}"),
+                        console=self.console,
+                        transient=True,
+                    ) as progress:
+                        progress.add_task("Thinking...", total=None)
+
+                    # Create live display for streaming
+                    response_chunks = []
+                    with Live(console=self.console, refresh_per_second=4) as live:
+                        # Start streaming
+                        async for chunk in self.client.stream_request(self.messages, tools=tools):
+                            if chunk:
+                                response_chunks.append(chunk)
+                                current_response = "".join(response_chunks)
+
+                                # Update the live display
+                                panel = Panel(
+                                    Markdown(current_response),
+                                    title=f"[bold blue]{self.provider.name}[/bold blue]",
+                                    border_style="blue",
+                                )
+                                live.update(panel)
+
+                    response_content = "".join(response_chunks)
+
+                else:
+                    # Use non-streaming for tool support
+                    with Progress(
+                        SpinnerColumn(),
+                        TextColumn("[progress.description]{task.description}"),
+                        console=self.console,
+                        transient=True,
+                    ) as progress:
+                        progress.add_task("Thinking (Tools Enabled)...", total=None)
+                        response = await self.client.send_request(self.messages, tools=tools)
+                        response_content = response.content
+                        response_tool_calls = response.tool_calls
 
                 # Add AI message to history
-                ai_message = ApiMessage(role=MessageRole.ASSISTANT, content=final_response)
+                ai_message = ApiMessage(
+                    role=MessageRole.ASSISTANT,
+                    content=response_content,
+                    tool_calls=response_tool_calls
+                )
                 self.messages.append(ai_message)
 
-                # Show final response in a nice panel
-                final_panel = Panel(
-                    Markdown(final_response),
-                    title=f"[bold blue]{self.provider.name}[/bold blue]",
-                    border_style="blue",
-                )
-                self.console.print(final_panel)
-                self.console.print()  # Add spacing
+                # Show final response if we didn't stream it
+                if not use_streaming and response_content:
+                    final_panel = Panel(
+                        Markdown(response_content),
+                        title=f"[bold blue]{self.provider.name}[/bold blue]",
+                        border_style="blue",
+                    )
+                    self.console.print(final_panel)
+                    self.console.print()
 
-        except Exception as e:
-            self.console.print(f"[red]Error getting response: {e}[/red]")
-            error_message = ApiMessage(
-                role=MessageRole.ASSISTANT, content=f"Sorry, I encountered an error: {e}"
-            )
-            self.messages.append(error_message)
+                # Handle Tool Calls
+                if response_tool_calls:
+                    for tool_call in response_tool_calls:
+                        # Extract tool info
+                        # OpenAI format: {'id': '...', 'type': 'function', 'function': {'name': '...', 'arguments': '...'}}
+                        # Anthropic might be different but we standardized on Dict.
+
+                        tool_name = ""
+                        tool_args = {}
+                        tool_id = tool_call.get("id")
+
+                        if tool_call.get("type") == "function":
+                             tool_name = tool_call["function"]["name"]
+                             import json
+                             args_str = tool_call["function"]["arguments"]
+                             if isinstance(args_str, str):
+                                 try:
+                                     tool_args = json.loads(args_str)
+                                 except:
+                                     tool_args = {} # Error parsing?
+                             else:
+                                 tool_args = args_str
+                        elif tool_call.get("type") == "tool_use": # Anthropic
+                             tool_name = tool_call.get("name")
+                             tool_args = tool_call.get("input", {})
+                             tool_id = tool_call.get("id")
+
+                        self.console.print(f"[yellow]Executing tool: {tool_name}[/yellow]")
+
+                        try:
+                            # Execute tool
+                            result = await self.mcp_manager.execute_tool(tool_name, tool_args)
+
+                            # Format result as string
+                            result_str = str(result)
+
+                            # Add tool result to history
+                            tool_message = ApiMessage(
+                                role=MessageRole.TOOL,
+                                content=result_str,
+                                tool_call_id=tool_id,
+                                name=tool_name
+                            )
+                            self.messages.append(tool_message)
+
+                        except Exception as e:
+                             self.console.print(f"[red]Tool execution failed: {e}[/red]")
+                             tool_message = ApiMessage(
+                                role=MessageRole.TOOL,
+                                content=f"Error: {str(e)}",
+                                tool_call_id=tool_id,
+                                name=tool_name
+                            )
+                             self.messages.append(tool_message)
+
+                    # Loop continues to get next response from AI
+                    continue
+
+                # If no tool calls, we are done
+                break
+
+            except Exception as e:
+                self.console.print(f"[red]Error getting response: {e}[/red]")
+                error_message = ApiMessage(
+                    role=MessageRole.ASSISTANT, content=f"Sorry, I encountered an error: {e}"
+                )
+                self.messages.append(error_message)
+                break

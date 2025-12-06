@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from vibe_coder.types.config import AIProvider, AppConfig
+from vibe_coder.types.config import AIProvider, AppConfig, MCPServer
 
 
 class ConfigManager:
@@ -167,6 +167,49 @@ class ConfigManager:
             ...     print("Provider exists")
         """
         return self._config.has_provider(name)
+
+    def get_mcp_server(self, name: str) -> Optional[MCPServer]:
+        """
+        Get an MCP server by name.
+
+        Args:
+            name: MCP server name
+
+        Returns:
+            MCPServer if found, None otherwise
+        """
+        return self._config.mcp_servers.get(name)
+
+    def list_mcp_servers(self) -> list[str]:
+        """
+        Get list of all configured MCP server names.
+
+        Returns:
+            List of MCP server names
+        """
+        return list(self._config.mcp_servers.keys())
+
+    def set_mcp_server(self, name: str, server: MCPServer) -> None:
+        """
+        Store an MCP server in configuration and save to disk.
+
+        Args:
+            name: Key to store server under
+            server: MCPServer object to store
+        """
+        self._config.mcp_servers[name] = server
+        self._save_config()
+
+    def delete_mcp_server(self, name: str) -> None:
+        """
+        Delete an MCP server from configuration.
+
+        Args:
+            name: Name of server to delete
+        """
+        if name in self._config.mcp_servers:
+            del self._config.mcp_servers[name]
+            self._save_config()
 
     def reset_config(self) -> None:
         """

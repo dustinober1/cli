@@ -22,6 +22,8 @@ anthropic = "^0.34.0"
 rich = "^13.0.0"
 gitpython = "^3.1.40"
 mcp = "^1.23.1"
+pyttsx3 = {version = "^2.99", optional = true}
+bandit = {version = "^1.9.2", optional = true}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"

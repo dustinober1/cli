@@ -47,6 +47,12 @@ class ChatCommand:
             import vibe_coder.commands.slash.commands.mcp  # noqa: F401
             import vibe_coder.commands.slash.commands.model  # noqa: F401
             import vibe_coder.commands.slash.commands.provider  # noqa: F401
+            import vibe_coder.commands.slash.commands.context  # noqa: F401
+            import vibe_coder.commands.slash.commands.mcp_tools  # noqa: F401
+            import vibe_coder.commands.slash.commands.workflow  # noqa: F401
+            import vibe_coder.commands.slash.commands.web  # noqa: F401
+            import vibe_coder.commands.slash.commands.voice  # noqa: F401
+            import vibe_coder.commands.slash.commands.security  # noqa: F401
 
             self.slash_parser = command_registry.get_parser()
 
@@ -256,6 +262,8 @@ class ChatCommand:
             working_directory=os.getcwd(),
             git_info=self.git_info,
         )
+        # Inject MCP manager (dynamically for now, until CommandContext is updated)
+        setattr(context, "mcp_manager", self.mcp_manager)
 
         # Parse and execute the command
         success, response = await self.slash_parser.parse_and_execute(command, context)

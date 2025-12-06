@@ -261,9 +261,8 @@ class ChatCommand:
             current_provider=self.provider,
             working_directory=os.getcwd(),
             git_info=self.git_info,
+            mcp_manager=self.mcp_manager,
         )
-        # Inject MCP manager (dynamically for now, until CommandContext is updated)
-        setattr(context, "mcp_manager", self.mcp_manager)
 
         # Parse and execute the command
         success, response = await self.slash_parser.parse_and_execute(command, context)

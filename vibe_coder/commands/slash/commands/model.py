@@ -4,11 +4,11 @@ from typing import List, Tuple
 
 import questionary
 
-from vibe_coder.commands.slash.base import BaseSlashCommand, CommandContext
+from vibe_coder.commands.slash.base import SlashCommand, CommandContext
 from vibe_coder.config.manager import config_manager
 
 
-class ModelCommand(BaseSlashCommand):
+class ModelCommand(SlashCommand):
     """
     Switch current model or provider.
 
@@ -16,8 +16,12 @@ class ModelCommand(BaseSlashCommand):
         /model [model_name]
     """
 
-    name = "model"
-    description = "Switch AI model"
+    def __init__(self):
+        super().__init__(
+            name="model",
+            description="Switch AI model",
+            category="system",
+        )
 
     async def execute(self, args: List[str], context: CommandContext) -> Tuple[bool, str]:
         provider = context.current_provider

@@ -61,7 +61,7 @@ class AnthropicClient(BaseApiClient):
                 params["max_tokens"] = 4096
 
             if tools:
-                params["tools"] = tools
+                params["tools"] = self._convert_tools_to_anthropic(tools)
 
             response = await self.anthropic_client.messages.create(
                 messages=claude_messages, system=system_message, **params
@@ -116,7 +116,7 @@ class AnthropicClient(BaseApiClient):
                 params["max_tokens"] = 4096
 
             if tools:
-                params["tools"] = tools
+                params["tools"] = self._convert_tools_to_anthropic(tools)
 
             async with self.anthropic_client.messages.stream(
                 messages=claude_messages, system=system_message, **params
@@ -247,6 +247,34 @@ class AnthropicClient(BaseApiClient):
             pass
 
         return system_message, claude_messages
+
+    def _convert_tools_to_anthropic(self, tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Convert OpenAI tool format to Anthropic format.
+
+        Args:
+            tools: List of tools in OpenAI format
+
+        Returns:
+            List of tools in Anthropic format
+        """
+        anthropic_tools = []
+        for tool in tools:
+            # OpenAI: {type: "function", function: {name: "...", description: "...", parameters: {...}}}
+            # Anthropic: {name: "...", description: "...", input_schema: {...}}
+
+            if tool.get("type") == "function":
+                func = tool.get("function", {})
+                anthropic_tool = {
+                    "name": func.get("name"),
+                    "description": func.get("description"),
+                    "input_schema": func.get("parameters", {})
+                }
+                anthropic_tools.append(anthropic_tool)
+            else:
+                # Assuming already in correct format or unknown
+                anthropic_tools.append(tool)
+
+        return anthropic_tools
 
     def _convert_response_from_anthropic(self, response: Message) -> ApiResponse:
         """Convert Anthropic response to ApiResponse.

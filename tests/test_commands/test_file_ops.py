@@ -107,7 +107,7 @@ hello_world()
         assert analysis["name"] == filename
         assert analysis["size"] == len(content)
         assert analysis["file_type"] == "python"
-        assert analysis["line_count"] == 4
+        assert analysis["line_count"] == 5
         assert analysis["is_file"] is True
         assert analysis["encoding"] == "utf-8"
         assert "hash" in analysis

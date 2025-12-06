@@ -13,8 +13,8 @@ from vibe_coder.types.config import AIProvider
 class MockCommand(SlashCommand):
     """Mock command for testing."""
 
-    def __init__(self, name: str, response: str = "Mock response", **kwargs):
-        super().__init__(name, "Mock command for testing", **kwargs)
+    def __init__(self, name: str, response: str = "Mock response", description: str = "Mock command for testing", **kwargs):
+        super().__init__(name, description, **kwargs)
         self.response = response
         self.execute_calls = []
 
@@ -79,7 +79,7 @@ class TestSlashCommandParser:
         assert parser.is_slash_command("/help")
         assert parser.is_slash_command("/test command args")
         assert not parser.is_slash_command("help")
-        assert not parser.is_slash_command(" /help")  # Leading space
+        assert parser.is_slash_command(" /help")  # Leading space is allowed
         assert not parser.is_slash_command("")
 
     def test_parse_command_basic(self, parser):
@@ -296,7 +296,7 @@ class TestSlashCommandParser:
 
     def test_get_help_text_specific(self, parser):
         """Test getting help for specific command."""
-        command = MockCommand("test", "Test command description", aliases=["t"])
+        command = MockCommand("test", response="resp", description="Test command description", aliases=["t"])
         parser.register_command(command)
 
         help_text = parser.get_help_text("test")

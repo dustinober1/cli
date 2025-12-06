@@ -116,6 +116,15 @@ class FileOperations:
 
             except UnicodeDecodeError:
                 analysis["encoding"] = "binary"
+        else:
+            # If binary or unknown, we still might want encoding key present
+            # or the test expects it if is_file is True but check skipped?
+            # Actually, analyze_file sets file_type first.
+            # Then checks _is_text_file.
+            # If not text file, it skips the block where "encoding" is set.
+            # So binary files get no encoding key unless we set it here.
+            if path.is_file():
+                analysis["encoding"] = "binary"
 
         return analysis
 

@@ -5,12 +5,12 @@ from typing import List, Tuple
 import questionary
 from rich.table import Table
 
-from vibe_coder.commands.slash.base import BaseSlashCommand, CommandContext
+from vibe_coder.commands.slash.base import SlashCommand, CommandContext
 from vibe_coder.config.manager import config_manager
 from vibe_coder.types.config import MCPServer
 
 
-class MCPCommand(BaseSlashCommand):
+class MCPCommand(SlashCommand):
     """
     Manage Model Context Protocol (MCP) servers.
 
@@ -20,8 +20,12 @@ class MCPCommand(BaseSlashCommand):
         /mcp remove <name>
     """
 
-    name = "mcp"
-    description = "Manage MCP servers"
+    def __init__(self):
+        super().__init__(
+            name="mcp",
+            description="Manage MCP servers",
+            category="mcp",
+        )
 
     async def execute(self, args: List[str], context: CommandContext) -> Tuple[bool, str]:
         if not args:

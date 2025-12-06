@@ -4,11 +4,11 @@ from typing import List, Tuple
 
 import questionary
 
-from vibe_coder.commands.slash.base import BaseSlashCommand, CommandContext
+from vibe_coder.commands.slash.base import SlashCommand, CommandContext
 from vibe_coder.config.manager import config_manager
 
 
-class ProviderCommand(BaseSlashCommand):
+class ProviderCommand(SlashCommand):
     """
     Switch AI provider.
 
@@ -16,8 +16,12 @@ class ProviderCommand(BaseSlashCommand):
         /provider [name]
     """
 
-    name = "provider"
-    description = "Switch AI provider"
+    def __init__(self):
+        super().__init__(
+            name="provider",
+            description="Switch AI provider",
+            category="system",
+        )
 
     async def execute(self, args: List[str], context: CommandContext) -> Tuple[bool, str]:
         if not args:

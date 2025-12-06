@@ -19,6 +19,7 @@ class CommandContext:
     file_cache: Optional[Dict[str, Any]] = None
     user_id: Optional[str] = None
     session_id: Optional[str] = None
+    mcp_manager: Optional[Any] = None
 
     def get_file_path(self, relative_path: str) -> str:
         """Get absolute file path from relative path."""

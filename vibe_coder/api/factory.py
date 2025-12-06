@@ -52,8 +52,8 @@ class ClientFactory:
         Raises:
             ValueError: If provider configuration is invalid
         """
-        if not provider or not provider.api_key or not provider.endpoint:
-            raise ValueError("Provider must have api_key and endpoint configured")
+        if not provider or not provider.endpoint:
+            raise ValueError("Provider must have endpoint configured")
 
         # Try detection by provider name first (most reliable)
         client_class = cls._detect_from_provider_name(provider.name)
@@ -163,21 +163,27 @@ class ClientFactory:
         if not provider.name:
             errors.append("Provider name is required")
 
-        if not provider.api_key:
-            errors.append("API key is required")
-
         if not provider.endpoint:
             errors.append("Endpoint URL is required")
 
         # Validate endpoint format
+        is_localhost = False
         try:
             parsed = urlparse(provider.endpoint)
             if not parsed.scheme or not parsed.netloc:
                 errors.append("Invalid endpoint URL format")
             elif parsed.scheme not in ["http", "https"]:
                 errors.append("Endpoint must use http or https protocol")
+            
+            # Check if localhost
+            if any(local in parsed.netloc.lower() for local in ["localhost", "127.0.0.1", "0.0.0.0"]):
+                is_localhost = True
         except Exception:
             errors.append("Invalid endpoint URL")
+
+        # API key is required unless it's a local endpoint
+        if not provider.api_key and not is_localhost:
+            errors.append("API key is required for non-local endpoints")
 
         # Check for common issues based on detected client type
         try:

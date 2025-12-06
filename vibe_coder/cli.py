@@ -139,7 +139,7 @@ def test(
 
 
 @app.callback()
-def main():
+def cli_callback():
     """
     Vibe Coder - Your AI coding assistant 🐍✨
 
@@ -149,5 +149,10 @@ def main():
     pass
 
 
-if __name__ == "__main__":
+def main():
+    """Entry point for the CLI."""
     app()
+
+
+if __name__ == "__main__":
+    main()

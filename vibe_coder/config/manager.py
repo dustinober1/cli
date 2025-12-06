@@ -121,6 +121,15 @@ class ConfigManager:
         """
         return self._config.get_provider()
 
+    def get_current_provider_name(self) -> str:
+        """
+        Get the name of the currently active provider.
+
+        Returns:
+            Name of the current provider (empty string if none)
+        """
+        return self._config.current_provider
+
     def list_providers(self) -> list[str]:
         """
         Get list of all configured provider names.

@@ -4,11 +4,11 @@ from typing import List, Tuple
 
 import questionary
 
-from vibe_coder.commands.slash.base import BaseSlashCommand, CommandContext
+from vibe_coder.commands.slash.base import CommandContext, SlashCommand
 from vibe_coder.config.manager import config_manager
 
 
-class ModelCommand(BaseSlashCommand):
+class ModelCommand(SlashCommand):
     """
     Switch current model or provider.
 

@@ -5,12 +5,11 @@ from typing import List, Tuple
 import questionary
 from rich.table import Table
 
-from vibe_coder.commands.slash.base import BaseSlashCommand, CommandContext
-from vibe_coder.config.manager import config_manager
-from vibe_coder.types.config import MCPServer
+from vibe_coder.commands.slash.base import CommandContext, SlashCommand
+from vibe_coder.mcp.manager import MCPManager
 
 
-class MCPCommand(BaseSlashCommand):
+class MCPCommand(SlashCommand):
     """
     Manage Model Context Protocol (MCP) servers.
 

@@ -108,14 +108,14 @@ class TestClientFactory:
 
     def test_invalid_provider_config(self):
         """Test validation of provider configuration."""
-        # Missing API key
+        # Missing API key should NOT raise ValueError now (supported for local models)
         provider = AIProvider(name="openai", api_key="", endpoint="https://api.openai.com/v1")
-        with pytest.raises(ValueError, match="api_key and endpoint"):
-            ClientFactory.create_client(provider)
+        client = ClientFactory.create_client(provider)
+        assert isinstance(client, OpenAIClient)
 
-        # Missing endpoint
+        # Missing endpoint MUST raise ValueError
         provider = AIProvider(name="openai", api_key="sk-test123456", endpoint="")
-        with pytest.raises(ValueError, match="api_key and endpoint"):
+        with pytest.raises(ValueError, match="Provider must have endpoint configured"):
             ClientFactory.create_client(provider)
 
     def test_get_supported_providers(self):

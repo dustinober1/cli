@@ -1,6 +1,6 @@
 """OpenAI API client implementation."""
 
-from typing import AsyncIterator, Dict, List, Optional
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 import openai
 from openai import AsyncOpenAI
@@ -31,6 +31,7 @@ class OpenAIClient(BaseApiClient):
         model: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
         **kwargs,
     ) -> ApiResponse:
         """Send a request to OpenAI API.
@@ -40,6 +41,7 @@ class OpenAIClient(BaseApiClient):
             model: Model name override
             temperature: Temperature override
             max_tokens: Max tokens override
+            tools: List of tools to provide to the model
             **kwargs: Additional OpenAI-specific parameters
 
         Returns:
@@ -53,6 +55,9 @@ class OpenAIClient(BaseApiClient):
 
             # Prepare request parameters
             params = self._prepare_request_params(model, temperature, max_tokens, **kwargs)
+
+            if tools:
+                params["tools"] = tools
 
             response = await self.openai_client.chat.completions.create(
                 messages=openai_messages, **params
@@ -77,6 +82,7 @@ class OpenAIClient(BaseApiClient):
         model: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
         **kwargs,
     ) -> AsyncIterator[str]:
         """Stream a response from OpenAI API.
@@ -86,6 +92,7 @@ class OpenAIClient(BaseApiClient):
             model: Model name override
             temperature: Temperature override
             max_tokens: Max tokens override
+            tools: List of tools to provide to the model
             **kwargs: Additional OpenAI-specific parameters
 
         Yields:
@@ -101,6 +108,9 @@ class OpenAIClient(BaseApiClient):
             params = self._prepare_request_params(model, temperature, max_tokens, **kwargs)
             params["stream"] = True
 
+            if tools:
+                params["tools"] = tools
+
             stream = await self.openai_client.chat.completions.create(
                 messages=openai_messages, **params
             )
@@ -108,6 +118,14 @@ class OpenAIClient(BaseApiClient):
             async for chunk in stream:
                 if chunk.choices:
                     delta = chunk.choices[0].delta
+
+                    # Handle tool calls in stream (more complex, might need buffering)
+                    # For now, we only yield content.
+                    # If tool_calls are present, we might need to change the yield type
+                    # or handle it in the consumer.
+                    # Current implementation assumes string yield.
+                    # If tool calls happen, content might be None.
+
                     if delta.content:
                         yield delta.content
 
@@ -148,7 +166,7 @@ class OpenAIClient(BaseApiClient):
         except Exception:
             return []
 
-    def _convert_messages_to_openai(self, messages: List[ApiMessage]) -> List[Dict[str, str]]:
+    def _convert_messages_to_openai(self, messages: List[ApiMessage]) -> List[Dict[str, Any]]:
         """Convert ApiMessage objects to OpenAI format.
 
         Args:
@@ -173,7 +191,23 @@ class OpenAIClient(BaseApiClient):
         # Add other messages
         for message in messages:
             if message.role != MessageRole.SYSTEM:
-                openai_messages.append({"role": message.role.value, "content": message.content})
+                msg_dict = {"role": message.role.value, "content": message.content}
+
+                # Add tool_calls if present
+                if message.role == MessageRole.ASSISTANT and message.tool_calls:
+                     # Convert tool_calls dicts to proper format if needed, but they are likely already dicts
+                     # from ApiResponse or constructed. OpenAI expects a list of objects.
+                     # Since our internal storage is List[Dict], it matches.
+                     msg_dict["tool_calls"] = message.tool_calls
+
+                # Add tool_call_id if present (for tool role)
+                if message.role == MessageRole.TOOL:
+                    if message.tool_call_id:
+                        msg_dict["tool_call_id"] = message.tool_call_id
+                    if message.name:
+                        msg_dict["name"] = message.name
+
+                openai_messages.append(msg_dict)
 
         # Ensure we have at least one message
         if not openai_messages:
@@ -200,9 +234,38 @@ class OpenAIClient(BaseApiClient):
             total_tokens=response.usage.total_tokens if response.usage else 0,
         )
 
-        return ApiResponse(
-            content=content, usage=usage, finish_reason=choice.finish_reason or "unknown"
+        # Handle tool calls
+        tool_calls = getattr(choice.message, "tool_calls", None)
+
+        # Convert tool_calls to dict format if they are objects
+        tool_calls_dict = None
+        if tool_calls:
+            tool_calls_dict = []
+            for tc in tool_calls:
+                # Assuming tc is a ToolCall object from OpenAI SDK
+                if hasattr(tc, "model_dump"):
+                    tool_calls_dict.append(tc.model_dump())
+                elif hasattr(tc, "to_dict"):
+                     tool_calls_dict.append(tc.to_dict())
+                else:
+                    # Fallback or manual construction
+                    tool_calls_dict.append({
+                        "id": getattr(tc, "id", None),
+                        "type": getattr(tc, "type", "function"),
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments
+                        }
+                    })
+
+        result = ApiResponse(
+            content=content,
+            usage=usage,
+            finish_reason=choice.finish_reason or "unknown",
+            tool_calls=tool_calls_dict
         )
+
+        return result
 
     def _handle_openai_error(self, error: openai.APIError) -> ApiResponse:
         """Handle OpenAI-specific errors.

@@ -33,6 +33,7 @@ class BaseApiClient(ABC):
         model: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
         **kwargs,
     ) -> ApiResponse:
         """Send a request to the AI provider.
@@ -42,6 +43,7 @@ class BaseApiClient(ABC):
             model: Model name override
             temperature: Temperature override
             max_tokens: Max tokens override
+            tools: List of tools to provide to the model
             **kwargs: Additional provider-specific parameters
 
         Returns:
@@ -56,6 +58,7 @@ class BaseApiClient(ABC):
         model: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
         **kwargs,
     ) -> AsyncIterator[str]:
         """Stream a response from the AI provider.
@@ -146,7 +149,7 @@ class BaseApiClient(ABC):
         """Async context manager exit."""
         await self.close()
 
-    def _convert_messages_to_dict(self, messages: List[ApiMessage]) -> List[Dict[str, str]]:
+    def _convert_messages_to_dict(self, messages: List[ApiMessage]) -> List[Dict[str, Any]]:
         """Convert ApiMessage objects to dictionary format.
 
         Args:
@@ -155,7 +158,7 @@ class BaseApiClient(ABC):
         Returns:
             List of message dictionaries
         """
-        return [{"role": message.role.value, "content": message.content} for message in messages]
+        return [message.to_dict() for message in messages]
 
     def _validate_messages(self, messages: List[ApiMessage]) -> None:
         """Validate that messages are properly formatted.
@@ -172,7 +175,9 @@ class BaseApiClient(ABC):
         for i, message in enumerate(messages):
             if not isinstance(message, ApiMessage):
                 raise ValueError(f"Message {i} is not a valid ApiMessage")
-            if not message.content.strip():
+            # Relax validation for tool messages or messages with tool calls
+            if not message.content.strip() and not message.tool_calls and message.role.value != "tool":
+                # Allow empty content if there are tool calls or if it is a tool response (though usually tool response has content)
                 raise ValueError(f"Message {i} has empty content")
 
     def _prepare_request_params(

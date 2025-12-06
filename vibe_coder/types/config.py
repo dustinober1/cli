@@ -7,7 +7,7 @@ These are similar to TypeScript interfaces but with runtime validation.
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 
 class InteractionMode(Enum):
@@ -49,6 +49,49 @@ class ProviderType(Enum):
 
     GENERIC = "generic"
     """Generic OpenAI-compatible endpoint"""
+
+
+@dataclass
+class MCPServer:
+    """
+    Configuration for an MCP (Model Context Protocol) server.
+    """
+
+    name: str
+    """Unique name for this MCP server"""
+
+    command: str
+    """Command to execute (for stdio transport) or URL (for sse transport)"""
+
+    args: List[str] = field(default_factory=list)
+    """Arguments for the command (for stdio transport)"""
+
+    env: Optional[Dict[str, str]] = None
+    """Environment variables for the process"""
+
+    transport: str = "stdio"
+    """Transport type: 'stdio' or 'sse'"""
+
+    def to_dict(self) -> Dict:
+        """Convert to dictionary."""
+        return {
+            "name": self.name,
+            "command": self.command,
+            "args": self.args,
+            "env": self.env,
+            "transport": self.transport,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict) -> "MCPServer":
+        """Create from dictionary."""
+        return cls(
+            name=data["name"],
+            command=data["command"],
+            args=data.get("args", []),
+            env=data.get("env"),
+            transport=data.get("transport", "stdio"),
+        )
 
 
 @dataclass
@@ -148,6 +191,7 @@ class AppConfig:
     Attributes:
         current_provider: Name of the currently active provider
         providers: Dictionary of all configured providers
+        mcp_servers: Dictionary of configured MCP servers
         default_model: Global default model (overridable per provider)
         default_temperature: Global default temperature
         default_max_tokens: Global default max tokens
@@ -167,6 +211,9 @@ class AppConfig:
 
     providers: Dict[str, AIProvider] = field(default_factory=dict)
     """Dictionary of all configured providers"""
+
+    mcp_servers: Dict[str, MCPServer] = field(default_factory=dict)
+    """Dictionary of configured MCP servers"""
 
     default_model: Optional[str] = None
     """Global default model name (optional)"""
@@ -265,6 +312,7 @@ class AppConfig:
         return {
             "current_provider": self.current_provider,
             "providers": {name: provider.to_dict() for name, provider in self.providers.items()},
+            "mcp_servers": {name: server.to_dict() for name, server in self.mcp_servers.items()},
             "default_model": self.default_model,
             "default_temperature": self.default_temperature,
             "default_max_tokens": self.default_max_tokens,
@@ -288,6 +336,11 @@ class AppConfig:
         providers_data = data.get("providers", {})
         for name, provider_data in providers_data.items():
             config.set_provider(name, AIProvider.from_dict(provider_data))
+
+        # Reconstruct MCP servers
+        mcp_data = data.get("mcp_servers", {})
+        for name, server_data in mcp_data.items():
+            config.mcp_servers[name] = MCPServer.from_dict(server_data)
 
         return config
 

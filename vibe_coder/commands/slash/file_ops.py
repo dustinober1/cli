@@ -19,8 +19,8 @@ class FileOperations:
     def get_absolute_path(self, filepath: str) -> Path:
         """Get absolute path from relative path."""
         if os.path.isabs(filepath):
-            return Path(filepath)
-        return self.working_directory / filepath
+            return Path(filepath).resolve()
+        return (self.working_directory / filepath).resolve()
 
     async def read_file(self, filepath: str) -> str:
         """Read file content with error handling."""
@@ -116,6 +116,8 @@ class FileOperations:
 
             except UnicodeDecodeError:
                 analysis["encoding"] = "binary"
+        else:
+            analysis["encoding"] = "binary"
 
         return analysis
 

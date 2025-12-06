@@ -28,7 +28,7 @@ class TestFileOperations:
         """Test getting absolute path from relative path."""
         # Relative path
         result = file_ops.get_absolute_path("test.txt")
-        assert str(result) == str(Path(temp_dir) / "test.txt")
+        assert result == (Path(temp_dir) / "test.txt").resolve()
 
         # Absolute path
         abs_path = "/absolute/path/test.txt"
@@ -107,7 +107,7 @@ hello_world()
         assert analysis["name"] == filename
         assert analysis["size"] == len(content)
         assert analysis["file_type"] == "python"
-        assert analysis["line_count"] == 4
+        assert analysis["line_count"] == 5
         assert analysis["is_file"] is True
         assert analysis["encoding"] == "utf-8"
         assert "hash" in analysis

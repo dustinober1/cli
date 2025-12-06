@@ -13,8 +13,8 @@ from vibe_coder.types.config import AIProvider
 class MockCommand(SlashCommand):
     """Mock command for testing."""
 
-    def __init__(self, name: str, response: str = "Mock response", **kwargs):
-        super().__init__(name, "Mock command for testing", **kwargs)
+    def __init__(self, name: str, description: str = "Mock command for testing", response: str = "Mock response", **kwargs):
+        super().__init__(name, description, **kwargs)
         self.response = response
         self.execute_calls = []
 
@@ -117,7 +117,7 @@ class TestSlashCommandParser:
 
     async def test_parse_and_execute_success(self, parser, mock_context):
         """Test successful command execution."""
-        command = MockCommand("test", "success response")
+        command = MockCommand("test", description="Test command description", response="success response")
         parser.register_command(command)
 
         success, response = await parser.parse_and_execute("/test arg1", mock_context)
@@ -160,7 +160,7 @@ class TestSlashCommandParser:
 
     async def test_parse_and_execute_git_requirement_success(self, parser, mock_context):
         """Test command that requires Git repo when in one."""
-        command = MockCommand("git-test", "git success")
+        command = MockCommand("git-test", description="Git command description", response="git success")
         command.requires_git_repo = lambda: True
         parser.register_command(command)
 
@@ -280,9 +280,9 @@ class TestSlashCommandParser:
 
     def test_get_help_text_general(self, parser):
         """Test getting general help text."""
-        parser.register_command(MockCommand("help", "Show help", category="system"))
+        parser.register_command(MockCommand("help", description="Show help", category="system"))
         parser.register_command(
-            MockCommand("test", "Test command", aliases=["t"], category="debug")
+            MockCommand("test", description="Test command", aliases=["t"], category="debug")
         )
 
         help_text = parser.get_help_text()
@@ -292,7 +292,7 @@ class TestSlashCommandParser:
         assert "Debug:" in help_text
         assert "/help" in help_text
         assert "/test|t" in help_text
-        assert "Mock command for testing" in help_text
+        assert "Test command" in help_text
 
     def test_get_help_text_specific(self, parser):
         """Test getting help for specific command."""

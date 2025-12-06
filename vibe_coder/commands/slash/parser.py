@@ -29,7 +29,7 @@ class SlashCommandParser:
 
     def is_slash_command(self, message: str) -> bool:
         """Check if message contains a slash command."""
-        return message.strip().startswith("/")
+        return message.startswith("/")
 
     def parse_command(self, message: str) -> Optional[tuple[str, List[str]]]:
         """

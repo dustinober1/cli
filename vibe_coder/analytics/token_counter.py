@@ -81,11 +81,19 @@ class TokenCounter:
 
     def count_tokens_sync(self, text: str, model: str) -> int:
         """Synchronous version of count_tokens."""
+        cache_key = f"{model}:{hash(text)}"
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+
         model_lower = model.lower()
 
         if self._tiktoken_available and self._is_openai_model(model_lower):
-            return self._count_tiktoken(text, model)
-        return self._estimate_tokens(text, model)
+            count = self._count_tiktoken(text, model)
+        else:
+            count = self._estimate_tokens(text, model)
+
+        self._cache[cache_key] = count
+        return count
 
     def _is_openai_model(self, model: str) -> bool:
         """Check if model is an OpenAI model."""

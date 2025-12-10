@@ -12,5 +12,9 @@ from . import project  # noqa: F401
 from . import repo  # noqa: F401
 from . import system  # noqa: F401
 from . import test  # noqa: F401
+from . import advanced_code  # noqa: F401
+from . import advanced_test  # noqa: F401
+from . import advanced_git  # noqa: F401
+from . import project_mgmt  # noqa: F401
 
 __all__ = []

@@ -54,6 +54,12 @@ class ChatCommand:
             import vibe_coder.commands.slash.commands.mcp  # noqa: F401
             import vibe_coder.commands.slash.commands.model  # noqa: F401
             import vibe_coder.commands.slash.commands.provider  # noqa: F401
+            import vibe_coder.commands.slash.commands.system  # noqa: F401
+            import vibe_coder.commands.slash.commands.test  # noqa: F401
+            import vibe_coder.commands.slash.commands.advanced_code  # noqa: F401
+            import vibe_coder.commands.slash.commands.advanced_test  # noqa: F401
+            import vibe_coder.commands.slash.commands.advanced_git  # noqa: F401
+            import vibe_coder.commands.slash.commands.project_mgmt  # noqa: F401
 
             self.slash_parser = command_registry.get_parser()
 

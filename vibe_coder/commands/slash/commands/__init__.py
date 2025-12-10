@@ -20,5 +20,9 @@ from . import snippet  # noqa: F401
 from . import fix  # noqa: F401
 from . import docs  # noqa: F401
 from . import deploy  # noqa: F401
+from . import specialized_code  # noqa: F401
+from . import specialized_test  # noqa: F401
+from . import remaining_git  # noqa: F401
+from . import contract_test  # noqa: F401
 
 __all__ = []

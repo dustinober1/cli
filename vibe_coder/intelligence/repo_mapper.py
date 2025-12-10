@@ -14,7 +14,10 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set
 
 from vibe_coder.intelligence.ast_analyzer import PythonASTAnalyzer
-from vibe_coder.intelligence.types import FileNode, RepositoryMap
+from vibe_coder.intelligence.file_monitor import FileWatcher
+from vibe_coder.intelligence.importance_scorer import ImportanceScorer
+from vibe_coder.intelligence.reference_resolver import ReferenceResolver
+from vibe_coder.intelligence.types import ContextItem, FileEvent, FileNode, RepositoryMap
 
 
 class RepositoryMapper:
@@ -70,6 +73,9 @@ class RepositoryMapper:
         root_path: str,
         cache_dir: Optional[str] = None,
         ignore_patterns: Optional[List[str]] = None,
+        enable_monitoring: bool = False,
+        enable_importance_scoring: bool = True,
+        enable_reference_resolution: bool = True,
     ):
         self.root_path = Path(root_path).resolve()
         self.cache_dir = Path(cache_dir) if cache_dir else self.root_path / ".vibe_cache"
@@ -81,6 +87,22 @@ class RepositoryMapper:
         # In-memory cache
         self._repo_map: Optional[RepositoryMap] = None
         self._file_cache: Dict[str, FileNode] = {}
+
+        # Enhanced features
+        self.enable_monitoring = enable_monitoring
+        self.enable_importance_scoring = enable_importance_scoring
+        self.enable_reference_resolution = enable_reference_resolution
+
+        # Initialize components
+        self.file_watcher: Optional[FileWatcher] = None
+        self.importance_scorer: Optional[ImportanceScorer] = None
+        self.reference_resolver: Optional[ReferenceResolver] = None
+
+        if self.enable_importance_scoring:
+            self.importance_scorer = ImportanceScorer(self)
+
+        if self.enable_reference_resolution:
+            self.reference_resolver = ReferenceResolver(self)
 
     async def scan_repository(self, use_cache: bool = True) -> RepositoryMap:
         """
@@ -133,6 +155,10 @@ class RepositoryMapper:
 
         # Save to cache
         self._save_cache(self._repo_map)
+
+        # Initialize reference resolver after scanning
+        if self.enable_reference_resolution and self.reference_resolver:
+            await self.reference_resolver.build_indexes()
 
         return self._repo_map
 
@@ -531,3 +557,209 @@ class RepositoryMapper:
             "test_files": len(self._repo_map.test_files),
             "generated_at": self._repo_map.generated_at,
         }
+
+    # Enhanced features methods
+
+    def start_monitoring(self, on_file_change=None) -> None:
+        """Start real-time file monitoring."""
+        if not self.enable_monitoring:
+            return
+
+        if not self.file_watcher:
+            self.file_watcher = FileWatcher(self, on_file_change)
+
+        self.file_watcher.start_monitoring()
+
+    def stop_monitoring(self) -> None:
+        """Stop real-time file monitoring."""
+        if self.file_watcher:
+            self.file_watcher.stop_monitoring()
+
+    async def compress_with_importance(
+        self,
+        max_tokens: int = 8000,
+        target_file: Optional[str] = None,
+        operation: Optional[str] = None,
+    ) -> str:
+        """
+        Create AI-friendly compressed representation with importance scoring.
+
+        Args:
+            max_tokens: Approximate token budget
+            target_file: File being operated on for context
+            operation: Type of operation for context
+
+        Returns:
+            Compressed string representation suitable for AI context
+        """
+        if not self._repo_map:
+            return "Repository not scanned yet."
+
+        # If importance scoring is disabled, use original method
+        if not self.enable_importance_scoring or not self.importance_scorer:
+            return self.compress_representation(max_tokens)
+
+        # Score all files
+        context = {"target_file": target_file, "operation": operation}
+        scored_files = []
+
+        for file_path, node in self._repo_map.modules.items():
+            importance = await self.importance_scorer.score_file(file_path, context)
+            scored_files.append((file_path, node, importance))
+
+        # Sort by importance
+        scored_files.sort(key=lambda x: x[2], reverse=True)
+
+        lines = []
+        lines.append(f"PROJECT: {self.root_path.name}")
+        lines.append(f"FILES: {self._repo_map.total_files} | LINES: {self._repo_map.total_lines}")
+
+        # Add languages
+        if self._repo_map.languages:
+            top_langs = sorted(self._repo_map.languages.items(), key=lambda x: x[1], reverse=True)[:3]
+            lang_str = ", ".join(f"{lang}: {count}" for lang, count in top_langs)
+            lines.append(f"LANGUAGES: {lang_str}")
+
+        lines.append("")
+        lines.append("STRUCTURE (by importance):")
+
+        # Build compressed view with importance
+        char_budget = max_tokens * 4  # Approximate chars per token
+        current_chars = len("\n".join(lines))
+
+        # Always include target file first
+        if target_file and target_file in self._repo_map.modules:
+            target_node = self._repo_map.modules[target_file]
+            target_repr = self._format_file_with_importance(target_node, 1.0, char_budget - current_chars)
+            if target_repr:
+                lines.append(target_repr)
+                current_chars += len(target_repr) + 1
+
+        # Add other files by importance
+        for file_path, node, importance in scored_files:
+            if current_chars >= char_budget:
+                lines.append("  ... (truncated)")
+                break
+
+            if file_path == target_file:
+                continue  # Already included
+
+            file_repr = self._format_file_with_importance(
+                node, importance, char_budget - current_chars
+            )
+            if file_repr:
+                lines.append(file_repr)
+                current_chars += len(file_repr) + 1
+
+        return "\n".join(lines)
+
+    def _format_file_with_importance(
+        self, node: FileNode, importance: float, char_budget: int
+    ) -> Optional[str]:
+        """Format a file representation based on importance."""
+        rel_path = str(Path(node.path).relative_to(self.root_path))
+
+        if importance > 0.8:
+            # High importance - include full details
+            lines = [f"  {rel_path} (HIGH - {node.lines_of_code} lines)"]
+
+            if node.functions:
+                lines.append("    FUNCTIONS:")
+                for func in node.functions[:5]:
+                    lines.append(f"      - {func}")
+
+            if node.classes:
+                lines.append("    CLASSES:")
+                for cls in node.classes[:3]:
+                    lines.append(f"      - {cls}")
+
+        elif importance > 0.5:
+            # Medium importance - include summary
+            parts = [rel_path, f"({node.lines_of_code} lines)"]
+            if node.functions:
+                parts.append(f"{len(node.functions)} funcs")
+            if node.classes:
+                parts.append(f"{len(node.classes)} classes")
+            lines = [f"  {' '.join(parts)}"]
+
+        elif importance > 0.2:
+            # Low importance - minimal info
+            lines = [f"  {rel_path} ({node.lines_of_code} lines)"]
+        else:
+            return None  # Skip very low importance files
+
+        result = "\n".join(lines)
+        return result if len(result) <= char_budget else None
+
+    async def get_context_items(
+        self,
+        target_file: Optional[str] = None,
+        operation: Optional[str] = None,
+        max_items: int = 20,
+    ) -> List[ContextItem]:
+        """
+        Get context items for AI operations.
+
+        Args:
+            target_file: Target file for context
+            operation: Type of operation
+            max_items: Maximum number of items to return
+
+        Returns:
+            List of context items with importance scores
+        """
+        if not self._repo_map:
+            return []
+
+        context_items = []
+        context = {"target_file": target_file, "operation": operation}
+
+        # Get scored files
+        if self.enable_importance_scoring and self.importance_scorer:
+            scored_files = await self.importance_scorer.rank_files(
+                list(self._repo_map.modules.keys()), context
+            )
+        else:
+            # Default ordering without importance scoring
+            scored_files = [(fp, 0.5) for fp in self._repo_map.modules.keys()]
+
+        for file_path, importance in scored_files[:max_items]:
+            node = self._repo_map.modules[file_path]
+
+            # Create context item
+            content = self._get_file_summary(node)
+            estimated_tokens = len(content) // 4  # Rough estimate
+
+            item = ContextItem(
+                path=file_path,
+                content=content,
+                importance=importance,
+                token_count=estimated_tokens,
+                type="file",
+                metadata={
+                    "language": node.language,
+                    "lines_of_code": node.lines_of_code,
+                    "functions": len(node.functions),
+                    "classes": len(node.classes),
+                },
+            )
+
+            context_items.append(item)
+
+        return context_items
+
+    def _get_file_summary(self, node: FileNode) -> str:
+        """Get a summary of a file's content."""
+        lines = [f"File: {Path(node.path).name} ({node.lines_of_code} lines)"]
+
+        if node.functions:
+            lines.append("Functions:")
+            for func in node.functions[:5]:
+                lines.append(f"  - {func}")
+
+        if node.classes:
+            lines.append("Classes:")
+            for cls in node.classes[:3]:
+                lines.append(f"  - {cls}")
+
+        return "\n".join(lines)

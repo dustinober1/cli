@@ -7,7 +7,8 @@ extracted via AST analysis.
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Optional, Set
+from enum import Enum
+from typing import Dict, List, Optional, Set, Any
 
 
 @dataclass
@@ -234,3 +235,207 @@ class RepositoryMap:
                 lines.append(f"  - {ep}")
 
         return "\n".join(lines)
+
+
+@dataclass
+class SymbolReference:
+    """Represents a symbol reference in code."""
+
+    name: str
+    file_path: str
+    line_number: int
+    column: int
+    reference_type: str  # "definition", "usage", "import"
+    context: str
+    symbol_type: Optional[str] = None  # "function", "class", "variable", "module"
+
+    def to_dict(self) -> Dict:
+        """Convert to dictionary for serialization."""
+        return {
+            "name": self.name,
+            "file_path": self.file_path,
+            "line_number": self.line_number,
+            "column": self.column,
+            "reference_type": self.reference_type,
+            "context": self.context,
+            "symbol_type": self.symbol_type,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict) -> "SymbolReference":
+        """Create from dictionary."""
+        return cls(
+            name=data["name"],
+            file_path=data["file_path"],
+            line_number=data["line_number"],
+            column=data["column"],
+            reference_type=data["reference_type"],
+            context=data["context"],
+            symbol_type=data.get("symbol_type"),
+        )
+
+
+@dataclass
+class Definition:
+    """Represents a symbol definition location."""
+
+    symbol: str
+    file_path: str
+    line_number: int
+    column: int
+    type: str  # "function", "class", "variable", "module"
+    signature: Optional[str] = None
+    docstring: Optional[str] = None
+
+    def to_dict(self) -> Dict:
+        """Convert to dictionary for serialization."""
+        return {
+            "symbol": self.symbol,
+            "file_path": self.file_path,
+            "line_number": self.line_number,
+            "column": self.column,
+            "type": self.type,
+            "signature": self.signature,
+            "docstring": self.docstring,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict) -> "Definition":
+        """Create from dictionary."""
+        return cls(
+            symbol=data["symbol"],
+            file_path=data["file_path"],
+            line_number=data["line_number"],
+            column=data["column"],
+            type=data["type"],
+            signature=data.get("signature"),
+            docstring=data.get("docstring"),
+        )
+
+
+class FileEventType(Enum):
+    """File system event types."""
+    CREATED = "created"
+    MODIFIED = "modified"
+    DELETED = "deleted"
+    MOVED = "moved"
+
+
+@dataclass
+class FileEvent:
+    """Represents a file system event."""
+
+    path: str
+    event_type: FileEventType
+    timestamp: datetime
+    old_path: Optional[str] = None  # For moved events
+
+    def to_dict(self) -> Dict:
+        """Convert to dictionary for serialization."""
+        return {
+            "path": self.path,
+            "event_type": self.event_type.value,
+            "timestamp": self.timestamp.isoformat(),
+            "old_path": self.old_path,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict) -> "FileEvent":
+        """Create from dictionary."""
+        return cls(
+            path=data["path"],
+            event_type=FileEventType(data["event_type"]),
+            timestamp=datetime.fromisoformat(data["timestamp"]),
+            old_path=data.get("old_path"),
+        )
+
+
+@dataclass
+class TokenBudget:
+    """Token allocation for different context sections."""
+
+    total: int
+    available: int
+    reserved_response: int
+    allocations: Dict[str, int] = field(default_factory=dict)  # section -> token count
+
+    def allocate(self, section: str, tokens: int) -> bool:
+        """Allocate tokens to a section if available."""
+        if tokens <= self.available:
+            self.allocations[section] = tokens
+            self.available -= tokens
+            return True
+        return False
+
+    def to_dict(self) -> Dict:
+        """Convert to dictionary for serialization."""
+        return {
+            "total": self.total,
+            "available": self.available,
+            "reserved_response": self.reserved_response,
+            "allocations": self.allocations,
+        }
+
+
+@dataclass
+class ContextItem:
+    """An item that can be included in AI context."""
+
+    path: str
+    content: str
+    importance: float
+    token_count: int
+    type: str  # "file", "function", "class", "import", "summary"
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict:
+        """Convert to dictionary for serialization."""
+        return {
+            "path": self.path,
+            "content": self.content,
+            "importance": self.importance,
+            "token_count": self.token_count,
+            "type": self.type,
+            "metadata": self.metadata,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict) -> "ContextItem":
+        """Create from dictionary."""
+        return cls(
+            path=data["path"],
+            content=data["content"],
+            importance=data["importance"],
+            token_count=data["token_count"],
+            type=data["type"],
+            metadata=data.get("metadata", {}),
+        )
+
+
+@dataclass
+class FileImportance:
+    """File importance metadata."""
+
+    file_path: str
+    score: float
+    factors: Dict[str, float] = field(default_factory=dict)  # factor_name -> score
+    last_calculated: datetime = field(default_factory=datetime.now)
+
+    def to_dict(self) -> Dict:
+        """Convert to dictionary for serialization."""
+        return {
+            "file_path": self.file_path,
+            "score": self.score,
+            "factors": self.factors,
+            "last_calculated": self.last_calculated.isoformat(),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict) -> "FileImportance":
+        """Create from dictionary."""
+        return cls(
+            file_path=data["file_path"],
+            score=data["score"],
+            factors=data.get("factors", {}),
+            last_calculated=datetime.fromisoformat(data.get("last_calculated", datetime.now().isoformat())),
+        )

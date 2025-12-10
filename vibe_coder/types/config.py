@@ -144,6 +144,22 @@ class AIProvider:
     headers: Optional[Dict[str, str]] = None
     """Custom HTTP headers (optional)"""
 
+    # Repository integration settings
+    repo_scan_depth: int = 10
+    """Maximum directory depth to scan for repository analysis"""
+
+    enable_file_monitoring: bool = True
+    """Enable real-time file monitoring for repository changes"""
+
+    context_token_budget: int = 8000
+    """Default token budget for repository context in chat"""
+
+    importance_threshold: float = 0.1
+    """Minimum importance score for files to be included in context"""
+
+    auto_context_injection: bool = True
+    """Automatically inject repository context into chat conversations"""
+
     def __post_init__(self) -> None:
         """Validate provider configuration after initialization."""
         # Validate temperature is in valid range
@@ -164,6 +180,11 @@ class AIProvider:
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
             "headers": self.headers,
+            "repo_scan_depth": self.repo_scan_depth,
+            "enable_file_monitoring": self.enable_file_monitoring,
+            "context_token_budget": self.context_token_budget,
+            "importance_threshold": self.importance_threshold,
+            "auto_context_injection": self.auto_context_injection,
         }
 
     @classmethod
@@ -177,6 +198,11 @@ class AIProvider:
             temperature=data.get("temperature", 0.7),
             max_tokens=data.get("max_tokens"),
             headers=data.get("headers"),
+            repo_scan_depth=data.get("repo_scan_depth", 10),
+            enable_file_monitoring=data.get("enable_file_monitoring", True),
+            context_token_budget=data.get("context_token_budget", 8000),
+            importance_threshold=data.get("importance_threshold", 0.1),
+            auto_context_injection=data.get("auto_context_injection", True),
         )
 
 

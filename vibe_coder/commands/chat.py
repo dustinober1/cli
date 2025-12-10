@@ -16,6 +16,8 @@ from vibe_coder.commands.slash.base import CommandContext
 from vibe_coder.commands.slash.git_ops import GitOperations
 from vibe_coder.commands.slash.registry import command_registry
 from vibe_coder.config.manager import config_manager
+from vibe_coder.intelligence.code_context import CodeContextProvider, ContextRequest, OperationType
+from vibe_coder.intelligence.repo_mapper import RepositoryMapper
 from vibe_coder.mcp.manager import MCPManager
 from vibe_coder.types.api import ApiMessage, MessageRole
 
@@ -32,6 +34,10 @@ class ChatCommand:
         self.git_info = None
         self.mcp_manager = MCPManager()
 
+        # Repository intelligence components
+        self.repo_mapper: Optional[RepositoryMapper] = None
+        self.context_provider: Optional[CodeContextProvider] = None
+
         # Initialize slash command system
         self._initialize_slash_commands()
 
@@ -44,6 +50,7 @@ class ChatCommand:
             import vibe_coder.commands.slash.commands.debug  # noqa: F401
             import vibe_coder.commands.slash.commands.git  # noqa: F401
             import vibe_coder.commands.slash.commands.project  # noqa: F401
+            import vibe_coder.commands.slash.commands.repo  # noqa: F401
             import vibe_coder.commands.slash.commands.mcp  # noqa: F401
             import vibe_coder.commands.slash.commands.model  # noqa: F401
             import vibe_coder.commands.slash.commands.provider  # noqa: F401
@@ -164,6 +171,10 @@ class ChatCommand:
         try:
             self.client = ClientFactory.create_client(provider)
             self.provider = provider
+
+            # Initialize repository intelligence
+            await self._initialize_repository_intelligence()
+
             return True
         except Exception as e:
             self.console.print(f"[red]Failed to create client: {e}[/red]")
@@ -214,6 +225,12 @@ class ChatCommand:
                 # Add user message
                 user_message = ApiMessage(role=MessageRole.USER, content=user_input)
                 self.messages.append(user_message)
+
+                # Inject repository context if available
+                context_message = await self._inject_context(user_input)
+                if context_message:
+                    # Insert context before the user message
+                    self.messages.insert(-1, context_message)
 
                 # Get AI response
                 await self._get_ai_response()
@@ -570,3 +587,128 @@ class ChatCommand:
                 )
                 self.messages.append(error_message)
                 break
+
+    async def _initialize_repository_intelligence(self):
+        """Initialize repository intelligence components."""
+        try:
+            # Initialize repository mapper for current directory
+            working_dir = os.getcwd()
+            self.repo_mapper = RepositoryMapper(
+                root_path=working_dir,
+                enable_monitoring=True,  # Enable file monitoring
+                enable_importance_scoring=True,
+                enable_reference_resolution=True,
+            )
+
+            # Scan repository
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=self.console,
+            ) as progress:
+                task = progress.add_task("Scanning repository...", total=None)
+                await self.repo_mapper.scan_repository()
+                progress.update(task, description="Repository scanned!")
+
+            # Start file monitoring
+            self.repo_mapper.start_monitoring()
+
+            # Initialize context provider
+            model_name = self.provider.model or "gpt-4"
+            self.context_provider = CodeContextProvider(self.repo_mapper, model_name)
+
+            # Get repository stats
+            stats = self.repo_mapper.get_stats()
+            self.console.print(
+                f"[green]📁 Repository: {stats['total_files']} files, "
+                f"{stats['total_lines']} lines[/green]"
+            )
+
+        except Exception as e:
+            # Don't fail if repository intelligence fails
+            self.console.print(f"[yellow]Warning: Repository intelligence disabled: {e}[/yellow]")
+            self.repo_mapper = None
+            self.context_provider = None
+
+    async def _inject_context(self, user_message: str) -> Optional[ApiMessage]:
+        """Inject repository context into the conversation."""
+        if not self.context_provider or not self.repo_mapper:
+            return None
+
+        # Analyze message to determine intent and target files
+        operation = self._analyze_message_intent(user_message)
+        target_file = self._extract_target_file(user_message)
+
+        # Get conversation history length (simplified)
+        history_tokens = len(str(self.messages)) // 4  # Rough estimate
+
+        # Create context request
+        context_request = ContextRequest(
+            operation=operation,
+            target_file=target_file,
+            token_budget=8000,  # Default budget
+            include_tests="test" in user_message.lower(),
+            include_docstrings=True,
+        )
+
+        # Get context with budgeting
+        try:
+            context_result = await self.context_provider.get_context_with_budgeting(
+                context_request, history_tokens
+            )
+
+            if context_result.context and context_result.token_estimate > 0:
+                # Add as system message
+                context_msg = ApiMessage(
+                    role=MessageRole.SYSTEM,
+                    content=(
+                        "Repository Context:\n"
+                        "You are working in a codebase with the following structure and context:\n\n"
+                        f"{context_result.context}\n\n"
+                        "Use this context to provide more relevant and accurate responses."
+                    ),
+                )
+                return context_msg
+        except Exception as e:
+            # Don't fail if context injection fails
+            self.console.print(f"[yellow]Warning: Context injection failed: {e}[/yellow]")
+
+        return None
+
+    def _analyze_message_intent(self, message: str) -> OperationType:
+        """Analyze user message to determine operation type."""
+        message_lower = message.lower()
+
+        if any(word in message_lower for word in ["fix", "error", "bug", "broken"]):
+            return OperationType.FIX
+        elif any(word in message_lower for word in ["refactor", "improve", "optimize", "clean up"]):
+            return OperationType.REFACTOR
+        elif any(word in message_lower for word in ["explain", "what does", "how does", "document"]):
+            return OperationType.EXPLAIN
+        elif any(word in message_lower for word in ["test", "testing", "tests"]):
+            return OperationType.TEST
+        elif any(word in message_lower for word in ["document", "docs", "documentation"]):
+            return OperationType.DOCUMENT
+        else:
+            return OperationType.GENERATE
+
+    def _extract_target_file(self, message: str) -> Optional[str]:
+        """Extract target file from user message."""
+        import re
+
+        # Look for file paths in the message
+        # Pattern: quotes around path with possible extensions
+        patterns = [
+            r'["\']([^"\']+\.(py|js|ts|jsx|tsx|go|rs|java|rb|php|c|cpp|h|hpp))["\']',
+            r'(?:file|path):\s*([^\s]+\.(py|js|ts|jsx|tsx|go|rs|java|rb|php|c|cpp|h|hpp))',
+            r'\b(\w+\.(py|js|ts|jsx|tsx|go|rs|java|rb|php|c|cpp|h|hpp))\b',
+        ]
+
+        for pattern in patterns:
+            matches = re.findall(pattern, message, re.IGNORECASE)
+            if matches:
+                # Return the first match (strip extension for full match patterns)
+                file_path = matches[0][0] if isinstance(matches[0], tuple) else matches[0]
+                return file_path
+
+        return None

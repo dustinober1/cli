@@ -8,10 +8,14 @@ code generation, fixing, and refactoring operations.
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TYPE_CHECKING
 
-from vibe_coder.intelligence.repo_mapper import RepositoryMapper
-from vibe_coder.intelligence.types import FileNode
+if TYPE_CHECKING:
+    from vibe_coder.analytics.token_counter import TokenCounter
+    from vibe_coder.intelligence.repo_mapper import RepositoryMapper
+
+from vibe_coder.intelligence.token_budgeter import TokenBudgeter, ContextRequest as BudgetRequest
+from vibe_coder.intelligence.types import ContextItem, FileNode
 
 
 class OperationType(Enum):
@@ -57,8 +61,10 @@ class CodeContextProvider:
     # Approximate characters per token
     CHARS_PER_TOKEN = 4
 
-    def __init__(self, repo_mapper: RepositoryMapper):
+    def __init__(self, repo_mapper: "RepositoryMapper", model_name: str = "gpt-4"):
         self.repo_mapper = repo_mapper
+        self.token_counter = TokenCounter()
+        self.token_budgeter = TokenBudgeter(self.token_counter, model_name)
 
     async def get_context(self, request: ContextRequest) -> ContextResult:
         """
@@ -87,6 +93,85 @@ class CodeContextProvider:
             return await self._get_document_context(request)
         else:
             return await self._get_generic_context(request)
+
+    async def get_context_with_budgeting(
+        self, request: ContextRequest, conversation_history_length: int = 0
+    ) -> ContextResult:
+        """
+        Get context using dynamic token budgeting.
+
+        Args:
+            request: Context request with operation type and parameters
+            conversation_history_length: Length of conversation history in tokens
+
+        Returns:
+            ContextResult with dynamically budgeted context
+        """
+        # Ensure repository is scanned
+        await self.repo_mapper.scan_repository()
+
+        # Create budget request
+        budget_request = BudgetRequest(
+            operation_type=request.operation.value,
+            target_file=request.target_file,
+            conversation_history_length=conversation_history_length,
+            custom_budget=request.token_budget,
+            model_name=self.token_budgeter.model_name,
+        )
+
+        # Calculate token budget
+        budget = await self.token_budgeter.calculate_budget(budget_request)
+
+        # Get context items from repository mapper
+        context_items = await self.repo_mapper.get_context_items(
+            target_file=request.target_file,
+            operation=request.operation.value,
+            max_items=50,  # Get more items than needed, will be filtered
+        )
+
+        # Filter and compress items based on budget
+        filtered_items = await self.token_budgeter.compress_context(context_items, budget)
+
+        # Build context from filtered items
+        context_lines = []
+        files_included = []
+        functions_included = []
+        classes_included = []
+        total_tokens = 0
+
+        # Add overview section
+        if "repository_overview" in budget.allocations:
+            overview = self._get_project_overview()
+            context_lines.append(overview)
+            total_tokens += await self.token_budgeter.estimate_tokens(overview)
+
+        # Add filtered items
+        for item in filtered_items:
+            context_lines.append(f"\n## {item.path}")
+            context_lines.append(item.content)
+
+            files_included.append(item.path)
+
+            # Extract function and class names from metadata
+            if "functions" in item.metadata:
+                # Add function names (this is simplified - would need actual parsing)
+                functions_included.extend([f"func_{i}" for i in range(item.metadata["functions"])])
+
+            if "classes" in item.metadata:
+                classes_included.extend([f"class_{i}" for i in range(item.metadata["classes"])])
+
+            total_tokens += item.token_count
+
+        context = "\n".join(context_lines)
+
+        return ContextResult(
+            context=context,
+            files_included=files_included,
+            functions_included=functions_included,
+            classes_included=classes_included,
+            token_estimate=total_tokens,
+            truncated=len(filtered_items) < len(context_items),
+        )
 
     async def _get_generation_context(self, request: ContextRequest) -> ContextResult:
         """Get context for code generation."""

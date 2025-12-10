@@ -22,6 +22,11 @@ class FileOperations:
             return Path(filepath).resolve()
         return (self.working_directory / filepath).resolve()
 
+    def detect_language(self, filepath: str) -> str:
+        """Detect the programming language of a file based on its extension."""
+        path = self.get_absolute_path(filepath)
+        return self._detect_file_type(path)
+
     async def read_file(self, filepath: str) -> str:
         """Read file content with error handling."""
         try:

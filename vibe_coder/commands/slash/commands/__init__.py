@@ -16,5 +16,9 @@ from . import advanced_code  # noqa: F401
 from . import advanced_test  # noqa: F401
 from . import advanced_git  # noqa: F401
 from . import project_mgmt  # noqa: F401
+from . import snippet  # noqa: F401
+from . import fix  # noqa: F401
+from . import docs  # noqa: F401
+from . import deploy  # noqa: F401
 
 __all__ = []

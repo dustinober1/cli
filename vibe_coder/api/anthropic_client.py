@@ -4,7 +4,7 @@ from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 
 import anthropic
 from anthropic import AsyncAnthropic
-from anthropic.types import Message
+from anthropic.types import Message, ToolUseBlock
 
 from vibe_coder.api.base import BaseApiClient
 from vibe_coder.types.api import ApiMessage, ApiResponse, MessageRole, TokenUsage
@@ -270,10 +270,16 @@ class AnthropicClient(BaseApiClient):
 
                 # Check for tool usage
                 if hasattr(block, "type") and block.type == "tool_use":
-                    # Convert object to dict if needed
-                    tool_calls.append(block.to_dict() if hasattr(block, "to_dict") else block)
-                elif isinstance(block, dict) and block.get("type") == "tool_use":
+                    # Keep as ToolUseBlock object if it already is one
                     tool_calls.append(block)
+                elif isinstance(block, dict) and block.get("type") == "tool_use":
+                    # Convert dict to ToolUseBlock object
+                    tool_calls.append(ToolUseBlock(
+                        id=block.get("id"),
+                        name=block.get("name"),
+                        input=block.get("input", {}),
+                        type="tool_use"
+                    ))
 
         # Extract usage information
         usage = TokenUsage(

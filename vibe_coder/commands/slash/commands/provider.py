@@ -27,9 +27,7 @@ class ProviderCommand(SlashCommand):
                 return False, "No providers configured."
 
             choice = await questionary.select(
-                "Select provider:",
-                choices=providers,
-                default=context.current_provider.name
+                "Select provider:", choices=providers, default=context.current_provider.name
             ).ask_async()
 
             if choice:
@@ -48,7 +46,10 @@ class ProviderCommand(SlashCommand):
                 # But SlashCommand architecture returns (success, message).
                 # We can return a specific message that tells user to restart or handle it.
 
-                return True, f"Provider switched to: {choice}. (Note: You may need to restart chat for full effect if connection is persistent)"
+                return (
+                    True,
+                    f"Provider switched to: {choice}. (Note: You may need to restart chat for full effect if connection is persistent)",
+                )
 
             return True, "Selection cancelled."
 

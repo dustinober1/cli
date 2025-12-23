@@ -37,8 +37,7 @@ class ModelCommand(SlashCommand):
 
             current_model = provider.model or "default"
             new_model = await questionary.text(
-                f"Current model is '{current_model}'. Enter new model name:",
-                default=current_model
+                f"Current model is '{current_model}'. Enter new model name:", default=current_model
             ).ask_async()
 
             if new_model and new_model != current_model:

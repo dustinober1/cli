@@ -44,12 +44,21 @@ Examples:
             if Path(target).exists():
                 return await self._fix_file(context, target, file_ops, dry_run, interactive)
             else:
-                return await self._fix_error_description(context, target, file_ops, dry_run, interactive)
+                return await self._fix_error_description(
+                    context, target, file_ops, dry_run, interactive
+                )
 
         except Exception as e:
             return f"Error fixing code: {e}"
 
-    async def _fix_file(self, context: CommandContext, filename: str, file_ops: FileOperations, dry_run: bool, interactive: bool) -> str:
+    async def _fix_file(
+        self,
+        context: CommandContext,
+        filename: str,
+        file_ops: FileOperations,
+        dry_run: bool,
+        interactive: bool,
+    ) -> str:
         """Fix errors in a specific file."""
         content = await file_ops.read_file(filename)
         language = file_ops.detect_language(filename)
@@ -78,11 +87,16 @@ Otherwise, provide:
 3. Explanation of each fix"""
 
         # Get AI response
-        response = await context.provider.client.send_request([
-            {"role": "system", "content": f"You are an expert {language} developer who identifies and fixes code errors. Be thorough and provide clear explanations.",
-             "name": "CodeFixer"},
-            {"role": "user", "content": prompt}
-        ])
+        response = await context.provider.client.send_request(
+            [
+                {
+                    "role": "system",
+                    "content": f"You are an expert {language} developer who identifies and fixes code errors. Be thorough and provide clear explanations.",
+                    "name": "CodeFixer",
+                },
+                {"role": "user", "content": prompt},
+            ]
+        )
 
         response_text = response.content.strip()
 
@@ -126,7 +140,14 @@ Otherwise, provide:
 
         return "\n".join(output)
 
-    async def _fix_error_description(self, context: CommandContext, error_desc: str, file_ops: FileOperations, dry_run: bool, interactive: bool) -> str:
+    async def _fix_error_description(
+        self,
+        context: CommandContext,
+        error_desc: str,
+        file_ops: FileOperations,
+        dry_run: bool,
+        interactive: bool,
+    ) -> str:
         """Fix based on error description."""
         prompt = f"""Provide a solution for this error: {error_desc}
 
@@ -138,11 +159,16 @@ Requirements:
 
 If it's a Python error, suggest the exact fix with proper imports and syntax."""
 
-        response = await context.provider.client.send_request([
-            {"role": "system", "content": "You are an expert debugger who helps developers fix errors. Provide clear, actionable solutions.",
-             "name": "ErrorFixer"},
-            {"role": "user", "content": prompt}
-        ])
+        response = await context.provider.client.send_request(
+            [
+                {
+                    "role": "system",
+                    "content": "You are an expert debugger who helps developers fix errors. Provide clear, actionable solutions.",
+                    "name": "ErrorFixer",
+                },
+                {"role": "user", "content": prompt},
+            ]
+        )
 
         return f"""🐛 Error Analysis: {error_desc}
 
@@ -160,8 +186,8 @@ If it's a Python error, suggest the exact fix with proper imports and syntax."""
             return "  No differences detected"
 
         # Simple line-by-line comparison
-        orig_lines = original.split('\n')
-        fixed_lines = fixed.split('\n')
+        orig_lines = original.split("\n")
+        fixed_lines = fixed.split("\n")
 
         changes = []
         for i, (orig, fix) in enumerate(zip(orig_lines, fixed_lines)):
@@ -175,7 +201,7 @@ If it's a Python error, suggest the exact fix with proper imports and syntax."""
         elif len(fixed_lines) < len(orig_lines):
             changes.append(f"  Removed {len(orig_lines) - len(fixed_lines)} line(s) from the end")
 
-        return '\n'.join(changes[:20])  # Limit output
+        return "\n".join(changes[:20])  # Limit output
 
 
 class DebugCommand(SlashCommand):
@@ -241,11 +267,16 @@ Provide:
 5. Recommendations for fixes
 6. Debugging steps to follow"""
 
-            response = await context.provider.client.send_request([
-                {"role": "system", "content": f"You are an expert debugger for {language}. Analyze code thoroughly and provide actionable debugging insights.",
-                 "name": "Debugger"},
-                {"role": "user", "content": prompt}
-            ])
+            response = await context.provider.client.send_request(
+                [
+                    {
+                        "role": "system",
+                        "content": f"You are an expert debugger for {language}. Analyze code thoroughly and provide actionable debugging insights.",
+                        "name": "Debugger",
+                    },
+                    {"role": "user", "content": prompt},
+                ]
+            )
 
             return f"""🔍 Debug Analysis for {filename}
 
@@ -299,6 +330,7 @@ from ..registry import command_registry
 command_registry.register(FixCommand())
 command_registry.register(DebugCommand())
 # command_registry.register(ExplainCommand())  # Temporarily disabled
+
 
 def register():
     """Register all fix commands."""

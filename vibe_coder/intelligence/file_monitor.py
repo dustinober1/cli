@@ -9,7 +9,7 @@ import asyncio
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Set, TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Set
 
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
@@ -102,6 +102,7 @@ class RepositoryEventHandler(FileSystemEventHandler):
                         self._debounce_queue.clear()
                         # Schedule processing in main thread
                         import concurrent.futures
+
                         with concurrent.futures.ThreadPoolExecutor() as executor:
                             future = executor.submit(self._process_events_sync, events)
                             # Don't wait for result to avoid blocking
@@ -127,7 +128,10 @@ class RepositoryEventHandler(FileSystemEventHandler):
                 if event.event_type == FileEventType.DELETED:
                     # Handle deletion
                     rel_path = os.path.relpath(event.path, self.repo_mapper.root_path)
-                    if self.repo_mapper._repo_map and rel_path in self.repo_mapper._repo_map.modules:
+                    if (
+                        self.repo_mapper._repo_map
+                        and rel_path in self.repo_mapper._repo_map.modules
+                    ):
                         del self.repo_mapper._repo_map.modules[rel_path]
                 elif event.event_type == FileEventType.MOVED:
                     # Handle move
@@ -177,10 +181,7 @@ class RepositoryEventHandler(FileSystemEventHandler):
             if event.old_path:
                 old_rel = os.path.relpath(event.old_path, self.repo_mapper.root_path)
                 new_rel = os.path.relpath(event.path, self.repo_mapper.root_path)
-                if (
-                    self.repo_mapper._repo_map
-                    and old_rel in self.repo_mapper._repo_map.modules
-                ):
+                if self.repo_mapper._repo_map and old_rel in self.repo_mapper._repo_map.modules:
                     node = self.repo_mapper._repo_map.modules[old_rel]
                     node.path = event.path
                     self.repo_mapper._repo_map.modules[new_rel] = node
@@ -224,12 +225,13 @@ class FileWatcher:
             return
 
         # Create new observer if needed (threads can't be restarted)
-        if hasattr(self.observer, 'is_alive') and self.observer.is_alive():
+        if hasattr(self.observer, "is_alive") and self.observer.is_alive():
             # Observer already running
             pass
         else:
             # Create new observer
             from watchdog.observers import Observer
+
             self.observer = Observer()
             self.monitored_paths.clear()
 
@@ -262,11 +264,11 @@ class FileWatcher:
         # Unschedule all watches
         try:
             # Note: After calling stop(), the observer cannot be restarted
-            if hasattr(self.observer, '_watches'):
+            if hasattr(self.observer, "_watches"):
                 # watchdog 0.9.x+ stores watches as a set
                 for watch in list(self.observer._watches):
                     self.observer.unschedule(watch)
-            elif hasattr(self.observer, '_handlers'):
+            elif hasattr(self.observer, "_handlers"):
                 # Older versions might store differently
                 for watch in list(self.observer._handlers):
                     self.observer.unschedule(watch)

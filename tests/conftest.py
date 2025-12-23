@@ -5,36 +5,26 @@ This module provides all the essential fixtures needed for comprehensive testing
 of the Vibe Coder CLI, including mocking, file system setup, and test utilities.
 """
 
-import asyncio
-import json
-import os
-import tempfile
 import shutil
+import tempfile
 from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional, AsyncGenerator
+from typing import AsyncGenerator, Generator
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import httpx
 import pytest
 import pytest_asyncio
-import httpx
 from rich.console import Console
 
-from vibe_coder.types.config import AIProvider, AppConfig, InteractionMode, ProviderType
-from vibe_coder.types.api import (
-    ApiMessage,
-    MessageRole,
-    ApiRequest,
-    ApiResponse,
-    TokenUsage,
-)
-from vibe_coder.config.manager import ConfigManager
-from vibe_coder.api.base import BaseApiClient
-from vibe_coder.api.factory import ClientFactory
-from vibe_coder.commands.slash.parser import SlashCommandParser
-from vibe_coder.intelligence.repo_mapper import RepositoryMapper
-from vibe_coder.healing.auto_healer import AutoHealer
 from vibe_coder.analytics.cost_tracker import CostTracker
+from vibe_coder.api.base import BaseApiClient
+from vibe_coder.commands.slash.parser import SlashCommandParser
+from vibe_coder.config.manager import ConfigManager
+from vibe_coder.healing.auto_healer import AutoHealer
+from vibe_coder.intelligence.repo_mapper import RepositoryMapper
 from vibe_coder.plugins.manager import PluginManager
-
+from vibe_coder.types.api import ApiMessage, ApiResponse, MessageRole, TokenUsage
+from vibe_coder.types.config import AIProvider, AppConfig
 
 # =============================================================================
 # Async Configuration Fixtures
@@ -96,8 +86,7 @@ async def sample_provider_anthropic() -> AIProvider:
 
 @pytest_asyncio.fixture
 async def config_manager_with_provider(
-    config_manager: ConfigManager,
-    sample_provider: AIProvider
+    config_manager: ConfigManager, sample_provider: AIProvider
 ) -> ConfigManager:
     """Create a ConfigManager instance with a pre-configured provider."""
     config_manager.set_provider(sample_provider.name, sample_provider)
@@ -109,6 +98,7 @@ async def config_manager_with_provider(
 # =============================================================================
 # File System Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def temp_dir() -> Generator[Path, None, None]:
@@ -134,7 +124,8 @@ def sample_python_project(temp_dir: Path) -> Path:
     (temp_dir / "tests" / "__init__.py").touch()
 
     # Create sample modules
-    (temp_dir / "src" / "main.py").write_text("""
+    (temp_dir / "src" / "main.py").write_text(
+        """
 def main():
     \"\"\"Main entry point.\"\"\"
     print("Hello, World!")
@@ -143,9 +134,11 @@ def main():
 
 if __name__ == "__main__":
     exit(main())
-""")
+"""
+    )
 
-    (temp_dir / "src" / "utils.py").write_text("""
+    (temp_dir / "src" / "utils.py").write_text(
+        """
 def helper_function(value: int) -> int:
     \"\"\"A simple helper function.\"\"\"
     return value * 2
@@ -159,9 +152,11 @@ class UtilityClass:
 
     def greet(self) -> str:
         return f"Hello, {self.name}!"
-""")
+"""
+    )
 
-    (temp_dir / "src" / "data.py").write_text("""
+    (temp_dir / "src" / "data.py").write_text(
+        """
 # Data module
 from dataclasses import dataclass
 from typing import List, Optional
@@ -183,10 +178,12 @@ class Post:
     def __post_init__(self):
         if self.tags is None:
             self.tags = []
-""")
+"""
+    )
 
     # Create test files
-    (temp_dir / "tests" / "test_main.py").write_text("""
+    (temp_dir / "tests" / "test_main.py").write_text(
+        """
 import pytest
 from src.main import main
 
@@ -195,9 +192,11 @@ def test_main():
     with pytest.raises(SystemExit) as exc_info:
         main()
     assert exc_info.value.code == 0
-""")
+"""
+    )
 
-    (temp_dir / "tests" / "test_utils.py").write_text("""
+    (temp_dir / "tests" / "test_utils.py").write_text(
+        """
 from src.utils import helper_function, UtilityClass
 
 def test_helper_function():
@@ -206,10 +205,12 @@ def test_helper_function():
 def test_utility_class():
     util = UtilityClass("Test")
     assert util.greet() == "Hello, Test!"
-""")
+"""
+    )
 
     # Create configuration files
-    (temp_dir / "pyproject.toml").write_text("""
+    (temp_dir / "pyproject.toml").write_text(
+        """
 [tool.poetry]
 name = "test-project"
 version = "0.1.0"
@@ -221,9 +222,11 @@ python = "^3.9"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
-""")
+"""
+    )
 
-    (temp_dir / "README.md").write_text("""
+    (temp_dir / "README.md").write_text(
+        """
 # Test Project
 
 This is a sample Python project for testing Vibe Coder functionality.
@@ -233,10 +236,12 @@ This is a sample Python project for testing Vibe Coder functionality.
 - Sample modules
 - Unit tests
 - Configuration files
-""")
+"""
+    )
 
     # Create .gitignore
-    (temp_dir / ".gitignore").write_text("""
+    (temp_dir / ".gitignore").write_text(
+        """
 __pycache__/
 *.pyc
 .pytest_cache/
@@ -247,7 +252,8 @@ build/
 *.egg-info/
 .venv/
 venv/
-""")
+"""
+    )
 
     return temp_dir
 
@@ -259,22 +265,35 @@ def git_repository(sample_python_project: Path) -> Path:
 
     # Run git commands
     subprocess.run(["git", "init"], cwd=sample_python_project, capture_output=True)
-    subprocess.run(["git", "config", "user.name", "Test User"], cwd=sample_python_project, capture_output=True)
-    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=sample_python_project, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.name", "Test User"], cwd=sample_python_project, capture_output=True
+    )
+    subprocess.run(
+        ["git", "config", "user.email", "test@example.com"],
+        cwd=sample_python_project,
+        capture_output=True,
+    )
     subprocess.run(["git", "add", "."], cwd=sample_python_project, capture_output=True)
-    subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=sample_python_project, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "Initial commit"], cwd=sample_python_project, capture_output=True
+    )
 
     # Create a feature branch
-    subprocess.run(["git", "checkout", "-b", "feature"], cwd=sample_python_project, capture_output=True)
+    subprocess.run(
+        ["git", "checkout", "-b", "feature"], cwd=sample_python_project, capture_output=True
+    )
 
     # Make some changes
-    (sample_python_project / "src" / "feature.py").write_text("""
+    (sample_python_project / "src" / "feature.py").write_text(
+        """
 def new_feature():
     \"\"\"A new feature function.\"\"\"
     return "New feature working!"
-""")
+"""
+    )
 
-    (sample_python_project / "README.md").write_text("""
+    (sample_python_project / "README.md").write_text(
+        """
 # Test Project
 
 This is a sample Python project for testing Vibe Coder functionality.
@@ -285,10 +304,13 @@ This is a sample Python project for testing Vibe Coder functionality.
 - Unit tests
 - Configuration files
 - New feature branch with additional code
-""")
+"""
+    )
 
     subprocess.run(["git", "add", "."], cwd=sample_python_project, capture_output=True)
-    subprocess.run(["git", "commit", "-m", "Add new feature"], cwd=sample_python_project, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "Add new feature"], cwd=sample_python_project, capture_output=True
+    )
 
     # Go back to main
     subprocess.run(["git", "checkout", "main"], cwd=sample_python_project, capture_output=True)
@@ -300,6 +322,7 @@ This is a sample Python project for testing Vibe Coder functionality.
 # AI Mocking Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def mock_openai_client():
     """Create a mock OpenAI client."""
@@ -308,12 +331,8 @@ def mock_openai_client():
     # Mock response
     mock_response = ApiResponse(
         content="This is a mock OpenAI response",
-        usage=TokenUsage(
-            prompt_tokens=10,
-            completion_tokens=15,
-            total_tokens=25
-        ),
-        finish_reason="stop"
+        usage=TokenUsage(prompt_tokens=10, completion_tokens=15, total_tokens=25),
+        finish_reason="stop",
     )
 
     client.send_request.return_value = mock_response
@@ -343,12 +362,8 @@ def mock_anthropic_client():
     # Mock response (slightly different for Anthropic)
     mock_response = ApiResponse(
         content="This is a mock Claude response",
-        usage=TokenUsage(
-            prompt_tokens=12,
-            completion_tokens=18,
-            total_tokens=30
-        ),
-        finish_reason="end_turn"
+        usage=TokenUsage(prompt_tokens=12, completion_tokens=18, total_tokens=30),
+        finish_reason="end_turn",
     )
 
     client.send_request.return_value = mock_response
@@ -376,12 +391,8 @@ def mock_generic_client():
     # Mock response
     mock_response = ApiResponse(
         content="This is a mock generic API response",
-        usage=TokenUsage(
-            prompt_tokens=8,
-            completion_tokens=12,
-            total_tokens=20
-        ),
-        finish_reason="stop"
+        usage=TokenUsage(prompt_tokens=8, completion_tokens=12, total_tokens=20),
+        finish_reason="stop",
     )
 
     client.send_request.return_value = mock_response
@@ -419,13 +430,12 @@ def mock_provider():
 def mock_ai_response():
     """Create a mock AI response for testing."""
     return ApiResponse(
-        content="Here's the solution to your problem:\n\n```python\ndef solution():\n    return 'success'\n```",
-        usage=TokenUsage(
-            prompt_tokens=50,
-            completion_tokens=30,
-            total_tokens=80
+        content=(
+            "Here's the solution to your problem:\n\n"
+            "```python\ndef solution():\n    return 'success'\n```"
         ),
-        finish_reason="stop"
+        usage=TokenUsage(prompt_tokens=50, completion_tokens=30, total_tokens=80),
+        finish_reason="stop",
     )
 
 
@@ -435,13 +445,17 @@ def mock_api_messages():
     return [
         ApiMessage(role=MessageRole.SYSTEM, content="You are a helpful AI assistant."),
         ApiMessage(role=MessageRole.USER, content="Write a Python function to add two numbers."),
-        ApiMessage(role=MessageRole.ASSISTANT, content="Here's a simple function:\n\n```python\ndef add(a, b):\n    return a + b\n```"),
+        ApiMessage(
+            role=MessageRole.ASSISTANT,
+            content="Here's a simple function:\n\n```python\ndef add(a, b):\n    return a + b\n```",
+        ),
     ]
 
 
 # =============================================================================
 # Command Context Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def mock_console():
@@ -493,6 +507,7 @@ def mock_http_client():
 # Questionary Mocking Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def mock_questionary():
     """Mock questionary prompts for testing interactive commands."""
@@ -516,12 +531,14 @@ def mock_questionary():
         }
 
         # Mock individual prompt functions
-        with patch("questionary.text") as mock_text, \
-             patch("questionary.password") as mock_password, \
-             patch("questionary.select") as mock_select, \
-             patch("questionary.checkbox") as mock_checkbox, \
-             patch("questionary.confirm") as mock_confirm, \
-             patch("questionary.path") as mock_path:
+        with (
+            patch("questionary.text") as mock_text,
+            patch("questionary.password") as mock_password,
+            patch("questionary.select") as mock_select,
+            patch("questionary.checkbox") as mock_checkbox,
+            patch("questionary.confirm") as mock_confirm,
+            patch("questionary.path") as mock_path,
+        ):
 
             mock_text.return_value.ask.return_value = "test input"
             mock_password.return_value.ask.return_value = "password"
@@ -552,6 +569,7 @@ def mock_wizard_responses():
 # =============================================================================
 # Intelligence Module Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def repository_mapper(sample_python_project: Path):
@@ -614,6 +632,7 @@ def sample_ast_data():
 # Healing Module Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def auto_healer(sample_python_project: Path):
     """Create an AutoHealer instance for testing."""
@@ -651,6 +670,7 @@ def calculate_average(numbers):
 # Analytics Module Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def cost_tracker():
     """Create a CostTracker instance for testing."""
@@ -681,6 +701,7 @@ def sample_usage_data():
 # =============================================================================
 # Plugin System Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def plugin_manager():
@@ -716,6 +737,7 @@ class CustomAnalyzer(BaseAnalyzerPlugin):
 # Test Utilities
 # =============================================================================
 
+
 @pytest.fixture
 def create_test_file():
     """Utility fixture to create test files dynamically."""
@@ -738,6 +760,7 @@ def create_test_file():
 @pytest.fixture
 def assert_files_equal():
     """Utility to compare file contents."""
+
     def _assert_equal(file1: Path, file2: Path):
         assert file1.exists(), f"File {file1} does not exist"
         assert file2.exists(), f"File {file2} does not exist"
@@ -750,6 +773,7 @@ def assert_files_equal():
 def capture_console_output():
     """Capture Rich console output for testing."""
     from io import StringIO
+
     from rich.console import Console
 
     console = Console(file=StringIO(), width=80)
@@ -762,28 +786,14 @@ def capture_console_output():
 # Markers and Configuration
 # =============================================================================
 
+
 def pytest_configure(config):
     """Configure custom markers."""
-    config.addinivalue_line(
-        "markers",
-        "unit: Mark test as a unit test"
-    )
-    config.addinivalue_line(
-        "markers",
-        "integration: Mark test as an integration test"
-    )
-    config.addinivalue_line(
-        "markers",
-        "slow: Mark test as slow running"
-    )
-    config.addinivalue_line(
-        "markers",
-        "network: Mark test as requiring network access"
-    )
-    config.addinivalue_line(
-        "markers",
-        "github: Mark test as requiring GitHub API access"
-    )
+    config.addinivalue_line("markers", "unit: Mark test as a unit test")
+    config.addinivalue_line("markers", "integration: Mark test as an integration test")
+    config.addinivalue_line("markers", "slow: Mark test as slow running")
+    config.addinivalue_line("markers", "network: Mark test as requiring network access")
+    config.addinivalue_line("markers", "github: Mark test as requiring GitHub API access")
 
 
 @pytest.fixture(autouse=True)

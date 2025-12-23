@@ -3,7 +3,7 @@
 import ast
 import re
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 from ..base import CommandContext, SlashCommand
 from ..file_ops import FileOperations
@@ -63,9 +63,7 @@ Examples:
                 return f"✅ No interfaces found in {filename}"
 
             # Generate target language code
-            generated = await self._generate_interfaces(
-                interfaces, language, format_type, context
-            )
+            generated = await self._generate_interfaces(interfaces, language, format_type, context)
 
             # Save if output file specified
             if output_file:
@@ -93,7 +91,7 @@ Examples:
                     for item in node.body:
                         if isinstance(item, ast.FunctionDef):
                             # Skip private methods unless requested
-                            if not include_private and item.name.startswith('_'):
+                            if not include_private and item.name.startswith("_"):
                                 continue
 
                             # Extract method signature
@@ -103,32 +101,44 @@ Examples:
 
                             returns = None
                             if item.returns:
-                                returns = ast.unparse(item.returns) if hasattr(ast, 'unparse') else "Any"
+                                returns = (
+                                    ast.unparse(item.returns) if hasattr(ast, "unparse") else "Any"
+                                )
 
-                            methods.append({
-                                "name": item.name,
-                                "args": args,
-                                "returns": returns,
-                                "doc": ast.get_docstring(item),
-                                "async": isinstance(item, ast.AsyncFunctionDef)
-                            })
+                            methods.append(
+                                {
+                                    "name": item.name,
+                                    "args": args,
+                                    "returns": returns,
+                                    "doc": ast.get_docstring(item),
+                                    "async": isinstance(item, ast.AsyncFunctionDef),
+                                }
+                            )
 
                         elif isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
                             # Property with type annotation
-                            if not include_private and item.target.id.startswith('_'):
+                            if not include_private and item.target.id.startswith("_"):
                                 continue
-                            properties.append({
-                                "name": item.target.id,
-                                "type": ast.unparse(item.annotation) if hasattr(ast, 'unparse') else "Any"
-                            })
+                            properties.append(
+                                {
+                                    "name": item.target.id,
+                                    "type": (
+                                        ast.unparse(item.annotation)
+                                        if hasattr(ast, "unparse")
+                                        else "Any"
+                                    ),
+                                }
+                            )
 
-                    interfaces.append({
-                        "name": node.name,
-                        "methods": methods,
-                        "properties": properties,
-                        "doc": ast.get_docstring(node),
-                        "bases": [base.id for base in node.bases if isinstance(base, ast.Name)]
-                    })
+                    interfaces.append(
+                        {
+                            "name": node.name,
+                            "methods": methods,
+                            "properties": properties,
+                            "doc": ast.get_docstring(node),
+                            "bases": [base.id for base in node.bases if isinstance(base, ast.Name)],
+                        }
+                    )
 
             return interfaces
 
@@ -141,13 +151,15 @@ Examples:
         interfaces = []
 
         # Find classes
-        class_pattern = r'(?:export\s+)?(?:abstract\s+)?class\s+(\w+)(?:\s+extends\s+(\w+))?\s*\{'
+        class_pattern = r"(?:export\s+)?(?:abstract\s+)?class\s+(\w+)(?:\s+extends\s+(\w+))?\s*\{"
         for match in re.finditer(class_pattern, content):
             class_name = match.group(1)
             base_class = match.group(2)
 
             # Extract methods (simplified)
-            method_pattern = r'(?:async\s+)?(?:public|private|protected)?\s*(\w+)\s*\(([^)]*)\)\s*(?::\s*(\w+))?'
+            method_pattern = (
+                r"(?:async\s+)?(?:public|private|protected)?\s*(\w+)\s*\(([^)]*)\)\s*(?::\s*(\w+))?"
+            )
             methods = []
 
             # Find methods within this class (simplified)
@@ -156,9 +168,9 @@ Examples:
             class_end = len(content)
 
             for i, char in enumerate(content[class_start:], class_start):
-                if char == '{':
+                if char == "{":
                     brace_count += 1
-                elif char == '}':
+                elif char == "}":
                     brace_count -= 1
                     if brace_count == 0:
                         class_end = i
@@ -167,21 +179,27 @@ Examples:
             class_content = content[class_start:class_end]
             for method_match in re.finditer(method_pattern, class_content):
                 method_name = method_match.group(1)
-                if not include_private and method_name.startswith('_'):
+                if not include_private and method_name.startswith("_"):
                     continue
-                methods.append({
-                    "name": method_name,
-                    "args": [arg.strip() for arg in method_match.group(2).split(',') if arg.strip()],
-                    "returns": method_match.group(3) or "void"
-                })
+                methods.append(
+                    {
+                        "name": method_name,
+                        "args": [
+                            arg.strip() for arg in method_match.group(2).split(",") if arg.strip()
+                        ],
+                        "returns": method_match.group(3) or "void",
+                    }
+                )
 
-            interfaces.append({
-                "name": class_name,
-                "methods": methods,
-                "properties": [],
-                "doc": None,
-                "bases": [base_class] if base_class else []
-            })
+            interfaces.append(
+                {
+                    "name": class_name,
+                    "methods": methods,
+                    "properties": [],
+                    "doc": None,
+                    "bases": [base_class] if base_class else [],
+                }
+            )
 
         return interfaces
 
@@ -191,16 +209,16 @@ Examples:
         interfaces = []
 
         # Find interfaces and classes
-        pattern = r'(?:public\s+)?(interface|class)\s+(\w+)(?:\s+extends\s+(\w+))?(?:\s+implements\s+([^{]+))?'
+        pattern = r"(?:public\s+)?(interface|class)\s+(\w+)(?:\s+extends\s+(\w+))?(?:\s+implements\s+([^{]+))?"
         for match in re.finditer(pattern, content):
             type_type = match.group(1)
             name = match.group(2)
             extends = match.group(3)
-            implements = match.group(4).split(', ') if match.group(4) else []
+            implements = match.group(4).split(", ") if match.group(4) else []
 
             # Extract methods
             methods = []
-            method_pattern = r'(?:public|private|protected)?\s*(?:static\s+)?(?:abstract\s+)?(\w+(?:<[^>]+>)?)\s+(\w+)\s*\(([^)]*)\)(?:\s+throws\s+([^{]+))?'
+            method_pattern = r"(?:public|private|protected)?\s*(?:static\s+)?(?:abstract\s+)?(\w+(?:<[^>]+>)?)\s+(\w+)\s*\(([^)]*)\)(?:\s+throws\s+([^{]+))?"
 
             # Get the class/interface body
             start = match.end()
@@ -208,9 +226,9 @@ Examples:
             end = len(content)
 
             for i, char in enumerate(content[start:], start):
-                if char == '{':
+                if char == "{":
                     brace_count += 1
-                elif char == '}':
+                elif char == "}":
                     brace_count -= 1
                     if brace_count == 0:
                         end = i
@@ -221,36 +239,37 @@ Examples:
             for method_match in re.finditer(method_pattern, body):
                 return_type = method_match.group(1)
                 method_name = method_match.group(2)
-                if not include_private and method_name.startswith('_'):
+                if not include_private and method_name.startswith("_"):
                     continue
 
                 args = []
                 if method_match.group(3):
-                    for arg in method_match.group(3).split(','):
+                    for arg in method_match.group(3).split(","):
                         arg = arg.strip()
                         if arg:
                             parts = arg.split()
                             if len(parts) >= 2:
                                 args.append(parts[-1])
 
-                methods.append({
-                    "name": method_name,
-                    "args": args,
-                    "returns": return_type,
-                    "doc": None
-                })
+                methods.append(
+                    {"name": method_name, "args": args, "returns": return_type, "doc": None}
+                )
 
-            interfaces.append({
-                "name": name,
-                "methods": methods,
-                "properties": [],
-                "doc": None,
-                "bases": [extends] if extends else implements
-            })
+            interfaces.append(
+                {
+                    "name": name,
+                    "methods": methods,
+                    "properties": [],
+                    "doc": None,
+                    "bases": [extends] if extends else implements,
+                }
+            )
 
         return interfaces
 
-    async def _generate_interfaces(self, interfaces: List[Dict], language: str, format_type: str, context: CommandContext) -> str:
+    async def _generate_interfaces(
+        self, interfaces: List[Dict], language: str, format_type: str, context: CommandContext
+    ) -> str:
         """Generate interface code in target language."""
 
         prompt = f"""Generate {language} {format_type} definitions from these extracted interfaces:
@@ -269,11 +288,16 @@ Requirements:
 
 Generate clean, production-ready {language} code."""
 
-        response = await context.provider.client.send_request([
-            {"role": "system", "content": f"You are an expert {language} developer. Generate idiomatic, type-safe interface definitions.",
-             "name": "InterfaceGenerator"},
-            {"role": "user", "content": prompt}
-        ])
+        response = await context.provider.client.send_request(
+            [
+                {
+                    "role": "system",
+                    "content": f"You are an expert {language} developer. Generate idiomatic, type-safe interface definitions.",
+                    "name": "InterfaceGenerator",
+                },
+                {"role": "user", "content": prompt},
+            ]
+        )
 
         return response.content.strip()
 
@@ -368,40 +392,58 @@ Indexes: {'Yes' if indexes else 'No'}
                         if isinstance(item, ast.AnnAssign):
                             if isinstance(item.target, ast.Name):
                                 field_name = item.target.id
-                                field_type = ast.unparse(item.annotation) if hasattr(ast, 'unparse') else "Any"
+                                field_type = (
+                                    ast.unparse(item.annotation)
+                                    if hasattr(ast, "unparse")
+                                    else "Any"
+                                )
                                 default = None
 
                                 if item.value:
-                                    default = ast.unparse(item.value) if hasattr(ast, 'unparse') else str(item.value)
+                                    default = (
+                                        ast.unparse(item.value)
+                                        if hasattr(ast, "unparse")
+                                        else str(item.value)
+                                    )
 
-                                fields.append({
-                                    "name": field_name,
-                                    "type": field_type,
-                                    "default": default,
-                                    "nullable": default is None or "Optional" in field_type
-                                })
+                                fields.append(
+                                    {
+                                        "name": field_name,
+                                        "type": field_type,
+                                        "default": default,
+                                        "nullable": default is None or "Optional" in field_type,
+                                    }
+                                )
 
                         elif isinstance(item, ast.Assign):
                             for target in item.targets:
                                 if isinstance(target, ast.Name):
                                     field_name = target.id
                                     field_type = "Any"
-                                    default = ast.unparse(item.value) if hasattr(ast, 'unparse') else str(item.value)
+                                    default = (
+                                        ast.unparse(item.value)
+                                        if hasattr(ast, "unparse")
+                                        else str(item.value)
+                                    )
 
-                                    fields.append({
-                                        "name": field_name,
-                                        "type": field_type,
-                                        "default": default,
-                                        "nullable": False
-                                    })
+                                    fields.append(
+                                        {
+                                            "name": field_name,
+                                            "type": field_type,
+                                            "default": default,
+                                            "nullable": False,
+                                        }
+                                    )
 
-                    models.append({
-                        "name": node.name,
-                        "fields": fields,
-                        "relationships": relationships,
-                        "doc": ast.get_docstring(node),
-                        "table_name": node.name.lower()
-                    })
+                    models.append(
+                        {
+                            "name": node.name,
+                            "fields": fields,
+                            "relationships": relationships,
+                            "doc": ast.get_docstring(node),
+                            "table_name": node.name.lower(),
+                        }
+                    )
 
             return models
 
@@ -414,7 +456,7 @@ Indexes: {'Yes' if indexes else 'No'}
 
         # Simple regex-based model extraction
         # Look for class definitions with typical model fields
-        class_pattern = r'(?:export\s+)?class\s+(\w+)(?:\s+extends\s+(\w+))?\s*\{'
+        class_pattern = r"(?:export\s+)?class\s+(\w+)(?:\s+extends\s+(\w+))?\s*\{"
 
         for match in re.finditer(class_pattern, content):
             class_name = match.group(1)
@@ -425,9 +467,9 @@ Indexes: {'Yes' if indexes else 'No'}
             end = len(content)
 
             for i, char in enumerate(content[start:], start):
-                if char == '{':
+                if char == "{":
                     brace_count += 1
-                elif char == '}':
+                elif char == "}":
                     brace_count -= 1
                     if brace_count == 0:
                         end = i
@@ -437,40 +479,53 @@ Indexes: {'Yes' if indexes else 'No'}
 
             # Extract properties
             fields = []
-            prop_pattern = r'(?:public|private|protected)?\s*(\w+(?:\??\s*:\s*[^;=]+)?)(?:\s*=\s*([^;]+))?;'
+            prop_pattern = (
+                r"(?:public|private|protected)?\s*(\w+(?:\??\s*:\s*[^;=]+)?)(?:\s*=\s*([^;]+))?;"
+            )
 
             for prop_match in re.finditer(prop_pattern, body):
                 field_def = prop_match.group(1)
                 default = prop_match.group(2)
 
-                if ':' in field_def:
-                    field_name, field_type = field_def.split(':', 1)
+                if ":" in field_def:
+                    field_name, field_type = field_def.split(":", 1)
                     field_name = field_name.strip()
                     field_type = field_type.strip()
                 else:
                     field_name = field_def
-                    field_type = 'any'
+                    field_type = "any"
 
-                fields.append({
-                    "name": field_name,
-                    "type": field_type,
-                    "default": default.strip() if default else None,
-                    "nullable": '?' in field_def
-                })
+                fields.append(
+                    {
+                        "name": field_name,
+                        "type": field_type,
+                        "default": default.strip() if default else None,
+                        "nullable": "?" in field_def,
+                    }
+                )
 
             if fields:  # Only add if has fields
-                models.append({
-                    "name": class_name,
-                    "fields": fields,
-                    "relationships": [],
-                    "doc": None,
-                    "table_name": class_name.lower()
-                })
+                models.append(
+                    {
+                        "name": class_name,
+                        "fields": fields,
+                        "relationships": [],
+                        "doc": None,
+                        "table_name": class_name.lower(),
+                    }
+                )
 
         return models
 
-    async def _generate_database_schema(self, models: List[Dict], database: str, orm: str,
-                                       migrations: bool, indexes: bool, context: CommandContext) -> str:
+    async def _generate_database_schema(
+        self,
+        models: List[Dict],
+        database: str,
+        orm: str,
+        migrations: bool,
+        indexes: bool,
+        context: CommandContext,
+    ) -> str:
         """Generate database schema code."""
 
         prompt = f"""Generate {database} database schema using {orm} ORM from these models:
@@ -491,11 +546,16 @@ Requirements:
 
 Generate complete, production-ready database schema code."""
 
-        response = await context.provider.client.send_request([
-            {"role": "system", "content": f"You are a database expert specializing in {orm} and {database}. Generate proper schemas with relationships, constraints, and optimizations.",
-             "name": "DatabaseSchemaGenerator"},
-            {"role": "user", "content": prompt}
-        ])
+        response = await context.provider.client.send_request(
+            [
+                {
+                    "role": "system",
+                    "content": f"You are a database expert specializing in {orm} and {database}. Generate proper schemas with relationships, constraints, and optimizations.",
+                    "name": "DatabaseSchemaGenerator",
+                },
+                {"role": "user", "content": prompt},
+            ]
+        )
 
         return response.content.strip()
 
@@ -506,6 +566,7 @@ from ..registry import command_registry
 # Auto-register commands when module is imported
 command_registry.register(InterfaceCommand())
 command_registry.register(SchemaCommand())
+
 
 def register():
     """Register all specialized code commands."""

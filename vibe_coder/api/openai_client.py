@@ -71,7 +71,7 @@ class OpenAIClient(BaseApiClient):
             return self._format_error_response(e, "rate_limit")
         except openai.AuthenticationError as e:
             return self._format_error_response(e, "authentication")
-        except openai.NetworkError as e:
+        except openai.APIConnectionError as e:
             return self._format_error_response(e, "network")
         except Exception as e:
             return self._format_error_response(e, "unknown")
@@ -147,7 +147,7 @@ class OpenAIClient(BaseApiClient):
         except openai.AuthenticationError:
             # API key is invalid
             return False
-        except openai.NetworkError:
+        except openai.APIConnectionError:
             # Network or endpoint issue
             return False
         except Exception:
@@ -195,10 +195,10 @@ class OpenAIClient(BaseApiClient):
 
                 # Add tool_calls if present
                 if message.role == MessageRole.ASSISTANT and message.tool_calls:
-                     # Convert tool_calls dicts to proper format if needed, but they are likely already dicts
-                     # from ApiResponse or constructed. OpenAI expects a list of objects.
-                     # Since our internal storage is List[Dict], it matches.
-                     msg_dict["tool_calls"] = message.tool_calls
+                    # Convert tool_calls dicts to proper format if needed, but they are likely already dicts
+                    # from ApiResponse or constructed. OpenAI expects a list of objects.
+                    # Since our internal storage is List[Dict], it matches.
+                    msg_dict["tool_calls"] = message.tool_calls
 
                 # Add tool_call_id if present (for tool role)
                 if message.role == MessageRole.TOOL:
@@ -242,27 +242,41 @@ class OpenAIClient(BaseApiClient):
         if tool_calls:
             tool_calls_dict = []
             for tc in tool_calls:
+                # If tc is already a dict, use it directly
+                if isinstance(tc, dict):
+                    tool_calls_dict.append(tc)
                 # Assuming tc is a ToolCall object from OpenAI SDK
-                if hasattr(tc, "model_dump"):
+                elif hasattr(tc, "model_dump") and callable(getattr(tc, "model_dump")):
                     tool_calls_dict.append(tc.model_dump())
-                elif hasattr(tc, "to_dict"):
-                     tool_calls_dict.append(tc.to_dict())
+                elif hasattr(tc, "to_dict") and callable(getattr(tc, "to_dict")):
+                    tool_calls_dict.append(tc.to_dict())
                 else:
                     # Fallback or manual construction
-                    tool_calls_dict.append({
-                        "id": getattr(tc, "id", None),
-                        "type": getattr(tc, "type", "function"),
-                        "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments
+                    # Handle both object and dict formats for function
+                    func = getattr(tc, "function", None)
+                    if func and isinstance(func, dict):
+                        func_dict = func
+                    elif func:
+                        func_dict = {
+                            "name": getattr(func, "name", None),
+                            "arguments": getattr(func, "arguments", None),
                         }
-                    })
+                    else:
+                        func_dict = {}
+
+                    tool_calls_dict.append(
+                        {
+                            "id": getattr(tc, "id", None),
+                            "type": getattr(tc, "type", "function"),
+                            "function": func_dict,
+                        }
+                    )
 
         result = ApiResponse(
             content=content,
             usage=usage,
             finish_reason=choice.finish_reason or "unknown",
-            tool_calls=tool_calls_dict
+            tool_calls=tool_calls_dict,
         )
 
         return result
@@ -278,8 +292,18 @@ class OpenAIClient(BaseApiClient):
         """
         error_type = "openai_error"
 
-        # Categorize error types
-        if "rate" in str(error).lower():
+        # Categorize error types by checking actual error class
+        if isinstance(error, openai.RateLimitError):
+            error_type = "rate_limit"
+        elif isinstance(error, openai.AuthenticationError):
+            error_type = "authentication"
+        elif isinstance(error, openai.APIConnectionError):
+            error_type = "network"
+        elif isinstance(error, openai.APITimeoutError):
+            error_type = "timeout"
+        elif isinstance(error, openai.BadRequestError):
+            error_type = "bad_request"
+        elif "rate" in str(error).lower():
             error_type = "rate_limit"
         elif "token" in str(error).lower():
             error_type = "token_limit"

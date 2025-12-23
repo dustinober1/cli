@@ -6,11 +6,8 @@ which provide real-time file system monitoring for repository intelligence.
 """
 
 import asyncio
-import tempfile
-import time
 from datetime import datetime
-from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -49,7 +46,7 @@ class TestRepositoryEventHandler:
         mock_event.src_path = str(tmp_path / "new_file.py")
 
         # Mock event loop
-        with patch('asyncio.get_event_loop') as mock_get_loop:
+        with patch("asyncio.get_event_loop") as mock_get_loop:
             mock_loop = MagicMock()
             mock_get_loop.return_value = mock_loop
 
@@ -74,7 +71,7 @@ class TestRepositoryEventHandler:
         mock_event.is_directory = False
         mock_event.src_path = str(tmp_path / "modified_file.py")
 
-        with patch('asyncio.get_event_loop') as mock_get_loop:
+        with patch("asyncio.get_event_loop") as mock_get_loop:
             mock_loop = MagicMock()
             mock_get_loop.return_value = mock_loop
 
@@ -97,7 +94,7 @@ class TestRepositoryEventHandler:
         mock_event.is_directory = False
         mock_event.src_path = str(tmp_path / "deleted_file.py")
 
-        with patch('asyncio.get_event_loop') as mock_get_loop:
+        with patch("asyncio.get_event_loop") as mock_get_loop:
             mock_loop = MagicMock()
             mock_get_loop.return_value = mock_loop
 
@@ -121,7 +118,7 @@ class TestRepositoryEventHandler:
         mock_event.src_path = str(tmp_path / "old_name.py")
         mock_event.dest_path = str(tmp_path / "new_name.py")
 
-        with patch('asyncio.get_event_loop') as mock_get_loop:
+        with patch("asyncio.get_event_loop") as mock_get_loop:
             mock_loop = MagicMock()
             mock_get_loop.return_value = mock_loop
 
@@ -145,7 +142,7 @@ class TestRepositoryEventHandler:
         mock_event.is_directory = True
         mock_event.src_path = str(tmp_path / "new_directory")
 
-        with patch('asyncio.get_event_loop') as mock_get_loop:
+        with patch("asyncio.get_event_loop") as mock_get_loop:
             mock_loop = MagicMock()
             mock_get_loop.return_value = mock_loop
 
@@ -167,12 +164,12 @@ class TestRepositoryEventHandler:
         event1 = FileEvent(
             path=str(tmp_path / "file1.py"),
             event_type=FileEventType.CREATED,
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
         event2 = FileEvent(
             path=str(tmp_path / "file2.py"),
             event_type=FileEventType.MODIFIED,
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
 
         handler._debounce_queue = {
@@ -205,7 +202,7 @@ class TestRepositoryEventHandler:
         event = FileEvent(
             path=str(tmp_path / "test_file.py"),
             event_type=FileEventType.DELETED,
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
 
         await handler._handle_event(event)
@@ -233,7 +230,7 @@ class TestRepositoryEventHandler:
             path=str(tmp_path / "new_name.py"),
             event_type=FileEventType.MOVED,
             timestamp=datetime.now(),
-            old_path=str(tmp_path / "old_name.py")
+            old_path=str(tmp_path / "old_name.py"),
         )
 
         await handler._handle_event(event)
@@ -255,7 +252,7 @@ class TestRepositoryEventHandler:
         mock_event.is_directory = False
         mock_event.src_path = str(tmp_path / "rapid_file.py")
 
-        with patch('asyncio.get_event_loop') as mock_get_loop:
+        with patch("asyncio.get_event_loop") as mock_get_loop:
             mock_loop = MagicMock()
             mock_get_loop.return_value = mock_loop
 
@@ -268,7 +265,10 @@ class TestRepositoryEventHandler:
             assert len(handler._debounce_queue) == 1
             assert str(tmp_path / "rapid_file.py") in handler._debounce_queue
             # Last event should be CREATED
-            assert handler._debounce_queue[str(tmp_path / "rapid_file.py")].event_type == FileEventType.CREATED
+            assert (
+                handler._debounce_queue[str(tmp_path / "rapid_file.py")].event_type
+                == FileEventType.CREATED
+            )
 
 
 class TestFileWatcher:
@@ -296,7 +296,7 @@ class TestFileWatcher:
         watcher = FileWatcher(mock_mapper)
 
         # Mock observer
-        with patch('vibe_coder.intelligence.file_monitor.Observer') as mock_observer_class:
+        with patch("vibe_coder.intelligence.file_monitor.Observer") as mock_observer_class:
             mock_observer = MagicMock()
             mock_observer_class.return_value = mock_observer
             mock_observer.is_alive.return_value = False
@@ -325,15 +325,12 @@ class TestFileWatcher:
         subdir1.mkdir()
         subdir2.mkdir()
 
-        with patch('vibe_coder.intelligence.file_monitor.Observer') as mock_observer_class:
+        with patch("vibe_coder.intelligence.file_monitor.Observer") as mock_observer_class:
             mock_observer = MagicMock()
             mock_observer_class.return_value = mock_observer
             mock_observer.is_alive.return_value = False
 
-            watcher.start_monitoring(
-                paths=[str(subdir1), str(subdir2)],
-                recursive=False
-            )
+            watcher.start_monitoring(paths=[str(subdir1), str(subdir2)], recursive=False)
 
             # Check both paths were scheduled
             assert mock_observer.schedule.call_count == 2
@@ -343,7 +340,7 @@ class TestFileWatcher:
 
             # Check recursive flag
             for call in calls:
-                assert call[1]['recursive'] is False
+                assert call[1]["recursive"] is False
 
     def test_start_monitoring_already_running(self, tmp_path):
         """Test starting monitoring when already running."""
@@ -354,7 +351,7 @@ class TestFileWatcher:
         watcher.is_monitoring = True
 
         # Mock observer
-        with patch('vibe_coder.intelligence.file_monitor.Observer') as mock_observer_class:
+        with patch("vibe_coder.intelligence.file_monitor.Observer") as mock_observer_class:
             mock_observer = MagicMock()
             mock_observer_class.return_value = mock_observer
 
@@ -373,7 +370,7 @@ class TestFileWatcher:
         watcher.monitored_paths.add(str(tmp_path))
 
         # Mock observer
-        with patch('vibe_coder.intelligence.file_monitor.Observer') as mock_observer_class:
+        with patch("vibe_coder.intelligence.file_monitor.Observer"):
             mock_observer = MagicMock()
             mock_observer.is_alive.return_value = True
             mock_observer._watches = [MagicMock()]
@@ -399,7 +396,7 @@ class TestFileWatcher:
         watcher.is_monitoring = False
 
         # Mock observer
-        with patch('vibe_coder.intelligence.file_monitor.Observer') as mock_observer_class:
+        with patch("vibe_coder.intelligence.file_monitor.Observer"):
             mock_observer = MagicMock()
             watcher.observer = mock_observer
 
@@ -420,13 +417,11 @@ class TestFileWatcher:
         new_path.mkdir()
 
         # Mock observer
-        with patch.object(watcher.observer, 'schedule') as mock_schedule:
+        with patch.object(watcher.observer, "schedule") as mock_schedule:
             watcher.add_path(str(new_path))
 
             mock_schedule.assert_called_once_with(
-                watcher.event_handler,
-                str(new_path.resolve()),
-                recursive=True
+                watcher.event_handler, str(new_path.resolve()), recursive=True
             )
 
             assert str(new_path.resolve()) in watcher.monitored_paths
@@ -440,7 +435,7 @@ class TestFileWatcher:
         watcher.is_monitoring = False
 
         # Mock observer
-        with patch.object(watcher.observer, 'schedule') as mock_schedule:
+        with patch.object(watcher.observer, "schedule") as mock_schedule:
             watcher.add_path(str(tmp_path))
 
             # Should not schedule
@@ -457,9 +452,11 @@ class TestFileWatcher:
         watcher.monitored_paths.add(path_to_remove)
 
         # Mock observer with multiple paths
-        with patch.object(watcher.observer, 'schedule') as mock_schedule, \
-             patch.object(watcher.observer, 'start') as mock_start, \
-             patch.object(watcher.observer, 'is_alive', return_value=True):
+        with (
+            patch.object(watcher.observer, "schedule"),
+            patch.object(watcher.observer, "start") as mock_start,
+            patch.object(watcher.observer, "is_alive", return_value=True),
+        ):
 
             watcher.remove_path(path_to_remove)
 
@@ -479,8 +476,10 @@ class TestFileWatcher:
         watcher.monitored_paths.add(path_to_remove)
 
         # Mock observer
-        with patch.object(watcher.observer, 'stop') as mock_stop, \
-             patch.object(watcher.observer, 'is_alive', return_value=True):
+        with (
+            patch.object(watcher.observer, "stop") as mock_stop,
+            patch.object(watcher.observer, "is_alive", return_value=True),
+        ):
 
             watcher.remove_path(path_to_remove)
 
@@ -498,15 +497,9 @@ class TestFileWatcher:
         watcher = FileWatcher(mock_mapper)
         watcher.is_monitoring = True
 
-        # Mock file event
-        test_event = FileEvent(
-            path=str(tmp_path / "changed.py"),
-            event_type=FileEventType.MODIFIED,
-            timestamp=datetime.now()
-        )
-
         # Mock wait_for_change
-        with patch('asyncio.wait_for') as mock_wait_for:
+        with patch("asyncio.wait_for") as mock_wait_for:
+
             async def mock_wait(event, timeout=None):
                 # Simulate immediate change
                 event.set()
@@ -514,7 +507,7 @@ class TestFileWatcher:
             mock_wait_for.side_effect = mock_wait
 
             # Call the method
-            result = await watcher.wait_for_change(timeout=5.0)
+            await watcher.wait_for_change(timeout=5.0)
 
             # Should have called wait_for_change
             mock_wait_for.assert_called_once()
@@ -529,7 +522,7 @@ class TestFileWatcher:
         watcher.is_monitoring = True
 
         # Mock timeout
-        with patch('asyncio.wait_for', side_effect=asyncio.TimeoutError()):
+        with patch("asyncio.wait_for", side_effect=asyncio.TimeoutError()):
             result = await watcher.wait_for_change(timeout=1.0)
 
             # Should return None on timeout
@@ -577,9 +570,7 @@ class TestFileEvent:
         """Test creating a file event."""
         timestamp = datetime.now()
         event = FileEvent(
-            path="/test/file.py",
-            event_type=FileEventType.MODIFIED,
-            timestamp=timestamp
+            path="/test/file.py", event_type=FileEventType.MODIFIED, timestamp=timestamp
         )
 
         assert event.path == "/test/file.py"
@@ -594,7 +585,7 @@ class TestFileEvent:
             path="/test/new_file.py",
             event_type=FileEventType.MOVED,
             timestamp=timestamp,
-            old_path="/test/old_file.py"
+            old_path="/test/old_file.py",
         )
 
         assert event.path == "/test/new_file.py"
@@ -609,7 +600,7 @@ class TestFileEvent:
             path="/test/file.py",
             event_type=FileEventType.CREATED,
             timestamp=timestamp,
-            old_path="/test/old.py"
+            old_path="/test/old.py",
         )
 
         # Convert to dict
@@ -627,7 +618,7 @@ class TestFileEvent:
             "path": "/test/file.py",
             "event_type": "deleted",
             "timestamp": timestamp.isoformat(),
-            "old_path": None
+            "old_path": None,
         }
 
         event = FileEvent.from_dict(data)
@@ -666,9 +657,7 @@ class TestIntegration:
 
         # Create and handle event
         event = FileEvent(
-            path=str(test_file),
-            event_type=FileEventType.MODIFIED,
-            timestamp=datetime.now()
+            path=str(test_file), event_type=FileEventType.MODIFIED, timestamp=datetime.now()
         )
 
         await handler._handle_event(event)
@@ -688,7 +677,7 @@ class TestIntegration:
         watcher = FileWatcher(mock_mapper)
 
         # First start - creates observer
-        with patch('vibe_coder.intelligence.file_monitor.Observer') as mock_observer_class:
+        with patch("vibe_coder.intelligence.file_monitor.Observer") as mock_observer_class:
             mock_observer1 = MagicMock()
             mock_observer1.is_alive.return_value = False
             mock_observer_class.return_value = mock_observer1
@@ -701,7 +690,7 @@ class TestIntegration:
         watcher.stop_monitoring()
 
         # Second start - should create new observer
-        with patch('vibe_coder.intelligence.file_monitor.Observer') as mock_observer_class:
+        with patch("vibe_coder.intelligence.file_monitor.Observer") as mock_observer_class:
             mock_observer2 = MagicMock()
             mock_observer2.is_alive.return_value = False
             mock_observer_class.return_value = mock_observer2

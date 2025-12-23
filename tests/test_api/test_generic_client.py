@@ -1,12 +1,11 @@
 """Test Generic OpenAI-compatible API client implementation."""
 
-import json
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Any, Dict, List
 
 from vibe_coder.api.generic_client import GenericClient
-from vibe_coder.types.api import ApiMessage, ApiResponse, MessageRole, TokenUsage
+from vibe_coder.types.api import ApiMessage, MessageRole
 from vibe_coder.types.config import AIProvider
 
 
@@ -26,9 +25,21 @@ class TestGenericClient:
 
     @pytest.fixture
     def mock_httpx_client(self):
-        """Create a mock httpx client."""
-        with patch('httpx.AsyncClient') as mock:
-            mock_instance = AsyncMock()
+        """Create a mock httpx client.
+
+        The mock needs to handle:
+        - post() and get() returning awaitable responses
+        - stream() returning an async context manager
+        """
+        with patch("httpx.AsyncClient") as mock:
+            mock_instance = Mock()
+
+            # post() and get() should return AsyncMock so they can be awaited
+            mock_instance.post = AsyncMock()
+            mock_instance.get = AsyncMock()
+            # stream() returns a regular Mock (will be set to async context manager per test)
+            mock_instance.stream = Mock()
+
             mock.return_value = mock_instance
             yield mock_instance
 
@@ -40,7 +51,7 @@ class TestGenericClient:
     @pytest.mark.asyncio
     async def test_initialization(self):
         """Test client initialization."""
-        with patch('httpx.AsyncClient') as mock:
+        with patch("httpx.AsyncClient") as mock:
             mock_instance = AsyncMock()
             mock.return_value = mock_instance
 
@@ -61,11 +72,11 @@ class TestGenericClient:
             headers={"X-Custom": "value"},
         )
 
-        with patch('httpx.AsyncClient') as mock:
+        with patch("httpx.AsyncClient") as mock:
             GenericClient(provider)
 
             call_kwargs = mock.call_args[1]
-            assert call_kwargs['headers']['X-Custom'] == "value"
+            assert call_kwargs["headers"]["X-Custom"] == "value"
 
     @pytest.mark.asyncio
     async def test_send_request_success(self, client):
@@ -74,17 +85,8 @@ class TestGenericClient:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
-            "choices": [
-                {
-                    "message": {"content": "Test response"},
-                    "finish_reason": "stop"
-                }
-            ],
-            "usage": {
-                "prompt_tokens": 10,
-                "completion_tokens": 20,
-                "total_tokens": 30
-            }
+            "choices": [{"message": {"content": "Test response"}, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30},
         }
 
         client.client.post.return_value = mock_response
@@ -110,13 +112,15 @@ class TestGenericClient:
 
         mock_response_fail = MagicMock()
         mock_response_fail.status_code = 404
-        mock_response_fail.raise_for_status.side_effect = HTTPStatusError("404 Not Found", request=MagicMock(), response=mock_response_fail)
+        mock_response_fail.raise_for_status.side_effect = HTTPStatusError(
+            "404 Not Found", request=MagicMock(), response=mock_response_fail
+        )
 
         mock_response_success = MagicMock()
         mock_response_success.status_code = 200
         mock_response_success.json.return_value = {
             "choices": [{"message": {"content": "Success"}}],
-            "usage": {"prompt_tokens": 5, "completion_tokens": 10, "total_tokens": 15}
+            "usage": {"prompt_tokens": 5, "completion_tokens": 10, "total_tokens": 15},
         }
 
         client.client.post.side_effect = [mock_response_fail, mock_response_success]
@@ -137,16 +141,22 @@ class TestGenericClient:
 
         mock_response_fail = MagicMock()
         mock_response_fail.status_code = 404
-        mock_response_fail.raise_for_status.side_effect = HTTPStatusError("404 Not Found", request=MagicMock(), response=mock_response_fail)
+        mock_response_fail.raise_for_status.side_effect = HTTPStatusError(
+            "404 Not Found", request=MagicMock(), response=mock_response_fail
+        )
 
         mock_response_success = MagicMock()
         mock_response_success.status_code = 200
         mock_response_success.json.return_value = {
             "choices": [{"message": {"content": "Success"}}],
-            "usage": {"prompt_tokens": 5, "completion_tokens": 10, "total_tokens": 15}
+            "usage": {"prompt_tokens": 5, "completion_tokens": 10, "total_tokens": 15},
         }
 
-        client.client.post.side_effect = [mock_response_fail, mock_response_fail, mock_response_success]
+        client.client.post.side_effect = [
+            mock_response_fail,
+            mock_response_fail,
+            mock_response_success,
+        ]
 
         messages = [ApiMessage(role=MessageRole.USER, content="Test")]
         await client.send_request(messages)
@@ -164,26 +174,22 @@ class TestGenericClient:
         mock_response.status_code = 200
         mock_response.json.return_value = {
             "choices": [{"message": {"content": "Response"}}],
-            "usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30}
+            "usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30},
         }
 
         client.client.post.return_value = mock_response
 
         messages = [ApiMessage(role=MessageRole.USER, content="Test")]
         await client.send_request(
-            messages,
-            model="custom-model",
-            temperature=0.3,
-            max_tokens=500,
-            top_p=0.9
+            messages, model="custom-model", temperature=0.3, max_tokens=500, top_p=0.9
         )
 
         call_args = client.client.post.call_args
-        payload = call_args[1]['json']
-        assert payload['model'] == "custom-model"
-        assert payload['temperature'] == 0.3
-        assert payload['max_tokens'] == 500
-        assert payload['top_p'] == 0.9
+        payload = call_args[1]["json"]
+        assert payload["model"] == "custom-model"
+        assert payload["temperature"] == 0.3
+        assert payload["max_tokens"] == 500
+        assert payload["top_p"] == 0.9
 
     @pytest.mark.asyncio
     async def test_send_request_alternative_response_format(self, client):
@@ -192,7 +198,7 @@ class TestGenericClient:
         mock_response.status_code = 200
         mock_response.json.return_value = {
             "content": "Direct content field",
-            "usage": {"prompt_tokens": 5, "completion_tokens": 15, "total_tokens": 20}
+            "usage": {"prompt_tokens": 5, "completion_tokens": 15, "total_tokens": 20},
         }
 
         client.client.post.return_value = mock_response
@@ -209,12 +215,7 @@ class TestGenericClient:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
-            "choices": [
-                {
-                    "text": "Text from choice",
-                    "finish_reason": "stop"
-                }
-            ]
+            "choices": [{"text": "Text from choice", "finish_reason": "stop"}]
         }
 
         client.client.post.return_value = mock_response
@@ -229,9 +230,7 @@ class TestGenericClient:
         """Test response without usage information."""
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "Response"}}]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"content": "Response"}}]}
 
         client.client.post.return_value = mock_response
 
@@ -257,32 +256,32 @@ class TestGenericClient:
     @pytest.mark.asyncio
     async def test_stream_request_success(self, client):
         """Test successful streaming request."""
-        # Create a proper mock for the streaming response
-        class MockAsyncContextManager:
-            def __init__(self, lines):
-                self.lines = lines
-                self.response = MagicMock()
-                self.response.status_code = 200
 
+        # Create a proper async generator for the lines
+        # Note: SSE format requires "data: " with a space
+        async def mock_aiter_lines():
+            lines = [
+                'data: {"choices":[{"delta":{"content":"Hello"}}]}',
+                'data: {"choices":[{"delta":{"content":" world"}}]}',
+                'data: {"choices":[{"delta":{"content":"!"}}]}',
+                "data: [DONE]",
+            ]
+            for line in lines:
+                yield line
+
+        mock_stream_response = MagicMock()
+        mock_stream_response.status_code = 200
+        mock_stream_response.aiter_lines = mock_aiter_lines
+
+        # Create a proper async context manager
+        class MockAsyncContextManager:
             async def __aenter__(self):
-                return self.response
+                return mock_stream_response
 
             async def __aexit__(self, exc_type, exc_val, exc_tb):
                 return None
 
-            async def mock_aiter_lines(self):
-                for line in self.lines:
-                    yield line
-
-        # Set up the mock
-        mock_context = MockAsyncContextManager([
-            "data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"}]}",
-            "data: {\"choices\":[{\"delta\":{\"content\":\" world\"}]}",
-            "data: {\"choices\":[{\"delta\":{\"content\":\"!\"}]}",
-            "data: [DONE]"
-        ])
-        mock_context.response.aiter_lines = mock_context.mock_aiter_lines
-        client.client.stream.return_value = mock_context
+        client.client.stream.return_value = MockAsyncContextManager()
 
         messages = [ApiMessage(role=MessageRole.USER, content="Stream test")]
         result = []
@@ -295,21 +294,32 @@ class TestGenericClient:
     @pytest.mark.asyncio
     async def test_stream_request_with_v1_endpoint(self, client):
         """Test streaming tries different endpoint paths."""
+
+        async def mock_aiter_lines():
+            # Empty iterator - just yields nothing
+            return
+            yield  # Never reached, but makes this a generator function
+
         mock_stream_response = MagicMock()
         mock_stream_response.status_code = 200
-        mock_lines = AsyncMock()
-        mock_lines.__aiter__ = AsyncMock(return_value=iter([]))
-        mock_stream_response.aiter_lines.return_value = mock_lines
+        mock_stream_response.aiter_lines = mock_aiter_lines
 
-        # First stream call fails, second succeeds
-        mock_context_manager1 = MagicMock()
-        mock_context_manager1.__aenter__.side_effect = Exception("404 Not Found")
+        # Create proper async context managers
+        class MockAsyncContextManager1:
+            async def __aenter__(self):
+                raise Exception("404 Not Found")
 
-        mock_context_manager2 = AsyncMock()
-        mock_context_manager2.__aenter__.return_value = mock_stream_response
-        mock_context_manager2.__aexit__ = AsyncMock(return_value=None)
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                return None
 
-        client.client.stream.side_effect = [mock_context_manager1, mock_context_manager2]
+        class MockAsyncContextManager2:
+            async def __aenter__(self):
+                return mock_stream_response
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                return None
+
+        client.client.stream.side_effect = [MockAsyncContextManager1(), MockAsyncContextManager2()]
 
         messages = [ApiMessage(role=MessageRole.USER, content="Test")]
         result = []
@@ -321,12 +331,13 @@ class TestGenericClient:
     @pytest.mark.asyncio
     async def test_stream_request_extract_content_variants(self, client):
         """Test extracting content from different chunk formats."""
+
         async def mock_aiter_lines():
             lines = [
-                "data: {\"choices\":[{\"delta\":{\"content\":\"Standard\"}]}",
-                "data: {\"content\":\"Direct field\"}",
-                "data: {\"text\":\"Text field\"}",
-                "data: [DONE]"
+                'data: {"choices":[{"delta":{"content":"Standard"}}]}',
+                'data: {"content":"Direct field"}',
+                'data: {"text":"Text field"}',
+                "data: [DONE]",
             ]
             for line in lines:
                 yield line
@@ -335,11 +346,15 @@ class TestGenericClient:
         mock_stream_response.status_code = 200
         mock_stream_response.aiter_lines = mock_aiter_lines
 
-        # Mock the async context manager
-        mock_context_manager = AsyncMock()
-        mock_context_manager.__aenter__.return_value = mock_stream_response
-        mock_context_manager.__aexit__ = AsyncMock(return_value=None)
-        client.client.stream.return_value = mock_context_manager
+        # Create a proper async context manager
+        class MockAsyncContextManager:
+            async def __aenter__(self):
+                return mock_stream_response
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                return None
+
+        client.client.stream.return_value = MockAsyncContextManager()
 
         messages = [ApiMessage(role=MessageRole.USER, content="Test")]
         result = []
@@ -351,12 +366,13 @@ class TestGenericClient:
     @pytest.mark.asyncio
     async def test_stream_request_malformed_json(self, client):
         """Test streaming with malformed JSON."""
+
         async def mock_aiter_lines():
             lines = [
-                "data: {\"choices\":[{\"delta\":{\"content\":\"Valid\"}]}",
+                'data: {"choices":[{"delta":{"content":"Valid"}}]}',
                 "data: invalid json",
-                "data: {\"choices\":[{\"delta\":{\"content\":\"Still valid\"}]}",
-                "data: [DONE]"
+                'data: {"choices":[{"delta":{"content":"Still valid"}}]}',
+                "data: [DONE]",
             ]
             for line in lines:
                 yield line
@@ -365,11 +381,15 @@ class TestGenericClient:
         mock_stream_response.status_code = 200
         mock_stream_response.aiter_lines = mock_aiter_lines
 
-        # Mock the async context manager
-        mock_context_manager = AsyncMock()
-        mock_context_manager.__aenter__.return_value = mock_stream_response
-        mock_context_manager.__aexit__ = AsyncMock(return_value=None)
-        client.client.stream.return_value = mock_context_manager
+        # Create a proper async context manager
+        class MockAsyncContextManager:
+            async def __aenter__(self):
+                return mock_stream_response
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                return None
+
+        client.client.stream.return_value = MockAsyncContextManager()
 
         messages = [ApiMessage(role=MessageRole.USER, content="Test")]
         result = []
@@ -397,12 +417,7 @@ class TestGenericClient:
         # Mock successful models response
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "data": [
-                {"id": "model1"},
-                {"id": "model2"}
-            ]
-        }
+        mock_response.json.return_value = {"data": [{"id": "model1"}, {"id": "model2"}]}
         client.client.get.return_value = mock_response
 
         result = await client.validate_connection()
@@ -418,9 +433,7 @@ class TestGenericClient:
         # Mock successful request through _try_request_endpoints
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "OK"}}]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"content": "OK"}}]}
         # Mock raise_for_status to not raise an exception
         mock_response.raise_for_status.return_value = None
 
@@ -445,11 +458,7 @@ class TestGenericClient:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
-            "data": [
-                {"id": "gpt-model"},
-                {"id": "llama-model"},
-                {"id": "custom-model"}
-            ]
+            "data": [{"id": "gpt-model"}, {"id": "llama-model"}, {"id": "custom-model"}]
         }
         client.client.get.return_value = mock_response
 
@@ -468,9 +477,7 @@ class TestGenericClient:
 
         mock_response_success = MagicMock()
         mock_response_success.status_code = 200
-        mock_response_success.json.return_value = {
-            "data": [{"id": "model1"}]
-        }
+        mock_response_success.json.return_value = {"data": [{"id": "model1"}]}
 
         client.client.get.side_effect = [mock_response_fail, mock_response_success]
 
@@ -488,7 +495,7 @@ class TestGenericClient:
         mock_response.json.return_value = [
             {"id": "model1"},
             {"id": "model2"},
-            "model3"  # String instead of dict
+            "model3",  # String instead of dict
         ]
         client.client.get.return_value = mock_response
 
@@ -501,13 +508,9 @@ class TestGenericClient:
     @pytest.mark.asyncio
     async def test_list_models_caching(self, client):
         """Test models caching."""
-        import time
-
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "data": [{"id": "cached-model"}]
-        }
+        mock_response.json.return_value = {"data": [{"id": "cached-model"}]}
         client.client.get.return_value = mock_response
 
         # First call
@@ -529,9 +532,7 @@ class TestGenericClient:
 
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "data": [{"id": "model"}]
-        }
+        mock_response.json.return_value = {"data": [{"id": "model"}]}
         client.client.get.return_value = mock_response
 
         # First call
@@ -558,11 +559,7 @@ class TestGenericClient:
         """Test building payload with provider defaults."""
         messages = [{"role": "user", "content": "Test"}]
         payload = client._build_payload(
-            messages,
-            model=None,
-            temperature=None,
-            max_tokens=None,
-            stream=False
+            messages, model=None, temperature=None, max_tokens=None, stream=False
         )
 
         assert payload["model"] == self.provider.model
@@ -582,7 +579,7 @@ class TestGenericClient:
             max_tokens=2000,
             stream=True,
             custom_param="value",
-            none_param=None
+            none_param=None,
         )
 
         assert payload["model"] == "override-model"
@@ -611,12 +608,7 @@ class TestGenericClient:
     @pytest.mark.asyncio
     async def test_extract_models_from_response_standard(self, client):
         """Test extracting models from standard OpenAI format."""
-        data = {
-            "data": [
-                {"id": "model1"},
-                {"id": "model2"}
-            ]
-        }
+        data = {"data": [{"id": "model1"}, {"id": "model2"}]}
 
         models = client._extract_models_from_response(data)
         assert models == ["model1", "model2"]
@@ -624,11 +616,7 @@ class TestGenericClient:
     @pytest.mark.asyncio
     async def test_extract_models_from_response_list(self, client):
         """Test extracting models from list response."""
-        data = [
-            {"id": "model1"},
-            {"id": "model2"},
-            "model3"  # String
-        ]
+        data = [{"id": "model1"}, {"id": "model2"}, "model3"]  # String
 
         models = client._extract_models_from_response(data)
         assert models == ["model1", "model2", "model3"]
@@ -636,9 +624,7 @@ class TestGenericClient:
     @pytest.mark.asyncio
     async def test_extract_models_from_response_malformed(self, client):
         """Test extracting models from malformed response."""
-        data = {
-            "invalid": "format"
-        }
+        data = {"invalid": "format"}
 
         models = client._extract_models_from_response(data)
         assert models == []
@@ -646,15 +632,7 @@ class TestGenericClient:
     @pytest.mark.asyncio
     async def test_extract_content_from_chunk_standard(self, client):
         """Test extracting content from standard chunk format."""
-        chunk = {
-            "choices": [
-                {
-                    "delta": {
-                        "content": "Hello world"
-                    }
-                }
-            ]
-        }
+        chunk = {"choices": [{"delta": {"content": "Hello world"}}]}
 
         content = client._extract_content_from_chunk(chunk)
         assert content == "Hello world"
@@ -662,9 +640,7 @@ class TestGenericClient:
     @pytest.mark.asyncio
     async def test_extract_content_from_chunk_direct(self, client):
         """Test extracting content from direct content field."""
-        chunk = {
-            "content": "Direct content"
-        }
+        chunk = {"content": "Direct content"}
 
         content = client._extract_content_from_chunk(chunk)
         assert content == "Direct content"
@@ -672,9 +648,7 @@ class TestGenericClient:
     @pytest.mark.asyncio
     async def test_extract_content_from_chunk_text(self, client):
         """Test extracting content from text field."""
-        chunk = {
-            "text": "Text content"
-        }
+        chunk = {"text": "Text content"}
 
         content = client._extract_content_from_chunk(chunk)
         assert content == "Text content"
@@ -682,9 +656,7 @@ class TestGenericClient:
     @pytest.mark.asyncio
     async def test_extract_content_from_chunk_no_content(self, client):
         """Test extracting content when no content exists."""
-        chunk = {
-            "other": "field"
-        }
+        chunk = {"other": "field"}
 
         content = client._extract_content_from_chunk(chunk)
         assert content is None

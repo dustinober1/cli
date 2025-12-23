@@ -616,7 +616,9 @@ class RepositoryMapper:
 
         # Add languages
         if self._repo_map.languages:
-            top_langs = sorted(self._repo_map.languages.items(), key=lambda x: x[1], reverse=True)[:3]
+            top_langs = sorted(self._repo_map.languages.items(), key=lambda x: x[1], reverse=True)[
+                :3
+            ]
             lang_str = ", ".join(f"{lang}: {count}" for lang, count in top_langs)
             lines.append(f"LANGUAGES: {lang_str}")
 
@@ -630,7 +632,9 @@ class RepositoryMapper:
         # Always include target file first
         if target_file and target_file in self._repo_map.modules:
             target_node = self._repo_map.modules[target_file]
-            target_repr = self._format_file_with_importance(target_node, 1.0, char_budget - current_chars)
+            target_repr = self._format_file_with_importance(
+                target_node, 1.0, char_budget - current_chars
+            )
             if target_repr:
                 lines.append(target_repr)
                 current_chars += len(target_repr) + 1

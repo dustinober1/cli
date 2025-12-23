@@ -6,7 +6,9 @@ import questionary
 from rich.table import Table
 
 from vibe_coder.commands.slash.base import CommandContext, SlashCommand
+from vibe_coder.config.manager import config_manager
 from vibe_coder.mcp.manager import MCPManager
+from vibe_coder.types.config import MCPServer
 
 
 class MCPCommand(SlashCommand):
@@ -70,12 +72,7 @@ class MCPCommand(SlashCommand):
         if transport not in ["stdio", "sse"]:
             return False, "Transport must be 'stdio' or 'sse'"
 
-        server = MCPServer(
-            name=name,
-            transport=transport,
-            command=command,
-            args=cmd_args
-        )
+        server = MCPServer(name=name, transport=transport, command=command, args=cmd_args)
 
         config_manager.set_mcp_server(name, server)
         return True, f"Added MCP server '{name}'"

@@ -1,7 +1,6 @@
 """Tests for slash command base classes."""
 
 import pytest
-from unittest.mock import Mock, patch
 
 from vibe_coder.commands.slash.base import CommandContext, SlashCommand
 from vibe_coder.types.api import ApiMessage, MessageRole
@@ -74,10 +73,7 @@ class TestSlashCommand:
     def command(self):
         """Create a concrete command for testing."""
         return self.ConcreteCommand(
-            name="test",
-            description="Test command",
-            aliases=["t", "test-cmd"],
-            category="testing"
+            name="test", description="Test command", aliases=["t", "test-cmd"], category="testing"
         )
 
     def test_command_creation(self, command):

@@ -1,7 +1,7 @@
 """Chat command implementation for Vibe Coder."""
 
 import os
-from typing import List, Optional, Any, Dict
+from typing import Any, Dict, List, Optional
 
 import questionary
 from rich.console import Console
@@ -46,24 +46,24 @@ class ChatCommand:
         # Import all commands to register them
         try:
             # Import command modules to register them
+            import vibe_coder.commands.slash.commands.advanced_code  # noqa: F401
+            import vibe_coder.commands.slash.commands.advanced_git  # noqa: F401
+            import vibe_coder.commands.slash.commands.advanced_test  # noqa: F401
             import vibe_coder.commands.slash.commands.code  # noqa: F401
             import vibe_coder.commands.slash.commands.debug  # noqa: F401
+            import vibe_coder.commands.slash.commands.deploy  # noqa: F401
+            import vibe_coder.commands.slash.commands.docs  # noqa: F401
+            import vibe_coder.commands.slash.commands.fix  # noqa: F401
             import vibe_coder.commands.slash.commands.git  # noqa: F401
-            import vibe_coder.commands.slash.commands.project  # noqa: F401
-            import vibe_coder.commands.slash.commands.repo  # noqa: F401
             import vibe_coder.commands.slash.commands.mcp  # noqa: F401
             import vibe_coder.commands.slash.commands.model  # noqa: F401
+            import vibe_coder.commands.slash.commands.project  # noqa: F401
+            import vibe_coder.commands.slash.commands.project_mgmt  # noqa: F401
             import vibe_coder.commands.slash.commands.provider  # noqa: F401
+            import vibe_coder.commands.slash.commands.repo  # noqa: F401
+            import vibe_coder.commands.slash.commands.snippet  # noqa: F401
             import vibe_coder.commands.slash.commands.system  # noqa: F401
             import vibe_coder.commands.slash.commands.test  # noqa: F401
-            import vibe_coder.commands.slash.commands.advanced_code  # noqa: F401
-            import vibe_coder.commands.slash.commands.advanced_test  # noqa: F401
-            import vibe_coder.commands.slash.commands.advanced_git  # noqa: F401
-            import vibe_coder.commands.slash.commands.project_mgmt  # noqa: F401
-            import vibe_coder.commands.slash.commands.snippet  # noqa: F401
-            import vibe_coder.commands.slash.commands.fix  # noqa: F401
-            import vibe_coder.commands.slash.commands.docs  # noqa: F401
-            import vibe_coder.commands.slash.commands.deploy  # noqa: F401
 
             self.slash_parser = command_registry.get_parser()
 
@@ -113,7 +113,9 @@ class ChatCommand:
                     progress.add_task("Connecting to MCP servers...", total=None)
                     await self.mcp_manager.connect_all()
             except Exception as e:
-                self.console.print(f"[yellow]Warning: Failed to connect to MCP servers: {e}[/yellow]")
+                self.console.print(
+                    f"[yellow]Warning: Failed to connect to MCP servers: {e}[/yellow]"
+                )
 
             # Welcome message
             self._show_welcome()
@@ -515,7 +517,7 @@ class ChatCommand:
                 ai_message = ApiMessage(
                     role=MessageRole.ASSISTANT,
                     content=response_content,
-                    tool_calls=response_tool_calls
+                    tool_calls=response_tool_calls,
                 )
                 self.messages.append(ai_message)
 
@@ -541,20 +543,21 @@ class ChatCommand:
                         tool_id = tool_call.get("id")
 
                         if tool_call.get("type") == "function":
-                             tool_name = tool_call["function"]["name"]
-                             import json
-                             args_str = tool_call["function"]["arguments"]
-                             if isinstance(args_str, str):
-                                 try:
-                                     tool_args = json.loads(args_str)
-                                 except:
-                                     tool_args = {} # Error parsing?
-                             else:
-                                 tool_args = args_str
-                        elif tool_call.get("type") == "tool_use": # Anthropic
-                             tool_name = tool_call.get("name")
-                             tool_args = tool_call.get("input", {})
-                             tool_id = tool_call.get("id")
+                            tool_name = tool_call["function"]["name"]
+                            import json
+
+                            args_str = tool_call["function"]["arguments"]
+                            if isinstance(args_str, str):
+                                try:
+                                    tool_args = json.loads(args_str)
+                                except:
+                                    tool_args = {}  # Error parsing?
+                            else:
+                                tool_args = args_str
+                        elif tool_call.get("type") == "tool_use":  # Anthropic
+                            tool_name = tool_call.get("name")
+                            tool_args = tool_call.get("input", {})
+                            tool_id = tool_call.get("id")
 
                         self.console.print(f"[yellow]Executing tool: {tool_name}[/yellow]")
 
@@ -570,19 +573,19 @@ class ChatCommand:
                                 role=MessageRole.TOOL,
                                 content=result_str,
                                 tool_call_id=tool_id,
-                                name=tool_name
+                                name=tool_name,
                             )
                             self.messages.append(tool_message)
 
                         except Exception as e:
-                             self.console.print(f"[red]Tool execution failed: {e}[/red]")
-                             tool_message = ApiMessage(
+                            self.console.print(f"[red]Tool execution failed: {e}[/red]")
+                            tool_message = ApiMessage(
                                 role=MessageRole.TOOL,
                                 content=f"Error: {str(e)}",
                                 tool_call_id=tool_id,
-                                name=tool_name
+                                name=tool_name,
                             )
-                             self.messages.append(tool_message)
+                            self.messages.append(tool_message)
 
                     # Loop continues to get next response from AI
                     continue
@@ -693,7 +696,9 @@ class ChatCommand:
             return OperationType.FIX
         elif any(word in message_lower for word in ["refactor", "improve", "optimize", "clean up"]):
             return OperationType.REFACTOR
-        elif any(word in message_lower for word in ["explain", "what does", "how does", "document"]):
+        elif any(
+            word in message_lower for word in ["explain", "what does", "how does", "document"]
+        ):
             return OperationType.EXPLAIN
         elif any(word in message_lower for word in ["test", "testing", "tests"]):
             return OperationType.TEST
@@ -710,8 +715,8 @@ class ChatCommand:
         # Pattern: quotes around path with possible extensions
         patterns = [
             r'["\']([^"\']+\.(py|js|ts|jsx|tsx|go|rs|java|rb|php|c|cpp|h|hpp))["\']',
-            r'(?:file|path):\s*([^\s]+\.(py|js|ts|jsx|tsx|go|rs|java|rb|php|c|cpp|h|hpp))',
-            r'\b(\w+\.(py|js|ts|jsx|tsx|go|rs|java|rb|php|c|cpp|h|hpp))\b',
+            r"(?:file|path):\s*([^\s]+\.(py|js|ts|jsx|tsx|go|rs|java|rb|php|c|cpp|h|hpp))",
+            r"\b(\w+\.(py|js|ts|jsx|tsx|go|rs|java|rb|php|c|cpp|h|hpp))\b",
         ]
 
         for pattern in patterns:

@@ -107,14 +107,18 @@ class GenericClient(BaseApiClient):
         try:
             # Try to list models first
             models = await self.list_models()
-            return len(models) > 0
-        except Exception:
-            # If models endpoint doesn't work, try a simple chat request
-            try:
-                await self.send_request([ApiMessage(role=MessageRole.USER, content="test")])
+            if len(models) > 0:
                 return True
-            except Exception:
-                return False
+        except Exception:
+            pass
+
+        # If no models found or models endpoint doesn't work, try a simple chat request
+        try:
+            response = await self.send_request([ApiMessage(role=MessageRole.USER, content="test")])
+            # Check if response is valid (not an error response)
+            return response.finish_reason != "error" and not response.error
+        except Exception:
+            return False
 
     async def list_models(self) -> List[str]:
         """List available models from the generic endpoint.

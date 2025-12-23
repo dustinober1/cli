@@ -174,9 +174,11 @@ class ClientFactory:
                 errors.append("Invalid endpoint URL format")
             elif parsed.scheme not in ["http", "https"]:
                 errors.append("Endpoint must use http or https protocol")
-            
+
             # Check if localhost
-            if any(local in parsed.netloc.lower() for local in ["localhost", "127.0.0.1", "0.0.0.0"]):
+            if any(
+                local in parsed.netloc.lower() for local in ["localhost", "127.0.0.1", "0.0.0.0"]
+            ):
                 is_localhost = True
         except Exception:
             errors.append("Invalid endpoint URL")

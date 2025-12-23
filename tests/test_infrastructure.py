@@ -2,11 +2,12 @@
 Tests to verify that the testing infrastructure is working correctly.
 """
 
-import pytest
 from pathlib import Path
 
-from vibe_coder.types.config import AIProvider, AppConfig
+import pytest
+
 from vibe_coder.types.api import ApiMessage, MessageRole
+from vibe_coder.types.config import AIProvider, AppConfig
 
 
 class TestFixtures:
@@ -58,21 +59,21 @@ class TestFixtures:
     def test_mock_openai_client(self, mock_openai_client):
         """Test the mock_openai_client fixture."""
         assert mock_openai_client is not None
-        assert hasattr(mock_openai_client, 'send_request')
-        assert hasattr(mock_openai_client, 'stream_request')
-        assert hasattr(mock_openai_client, 'validate_connection')
+        assert hasattr(mock_openai_client, "send_request")
+        assert hasattr(mock_openai_client, "stream_request")
+        assert hasattr(mock_openai_client, "validate_connection")
 
     def test_mock_anthropic_client(self, mock_anthropic_client):
         """Test the mock_anthropic_client fixture."""
         assert mock_anthropic_client is not None
-        assert hasattr(mock_anthropic_client, 'send_request')
-        assert hasattr(mock_anthropic_client, 'stream_request')
+        assert hasattr(mock_anthropic_client, "send_request")
+        assert hasattr(mock_anthropic_client, "stream_request")
 
     def test_mock_generic_client(self, mock_generic_client):
         """Test the mock_generic_client fixture."""
         assert mock_generic_client is not None
-        assert hasattr(mock_generic_client, 'send_request')
-        assert hasattr(mock_generic_client, 'stream_request')
+        assert hasattr(mock_generic_client, "send_request")
+        assert hasattr(mock_generic_client, "stream_request")
 
     def test_mock_provider(self, mock_provider):
         """Test the mock_provider fixture."""
@@ -98,14 +99,14 @@ class TestFixtures:
     def test_mock_console(self, mock_console):
         """Test the mock_console fixture."""
         assert mock_console is not None
-        assert hasattr(mock_console, 'print')
-        assert hasattr(mock_console, 'input')
-        assert hasattr(mock_console, 'panel')
+        assert hasattr(mock_console, "print")
+        assert hasattr(mock_console, "input")
+        assert hasattr(mock_console, "panel")
 
     def test_slash_command_parser(self, slash_command_parser):
         """Test the slash_command_parser fixture."""
         assert slash_command_parser is not None
-        assert hasattr(slash_command_parser, 'parse')
+        assert hasattr(slash_command_parser, "parse")
 
     def test_sample_ast_data(self, sample_ast_data):
         """Test the sample_ast_data fixture."""
@@ -128,7 +129,7 @@ class TestFixtures:
     def test_cost_tracker(self, cost_tracker):
         """Test the cost_tracker fixture."""
         assert cost_tracker is not None
-        assert hasattr(cost_tracker, 'track_usage')
+        assert hasattr(cost_tracker, "track_usage")
 
     def test_sample_usage_data(self, sample_usage_data):
         """Test the sample_usage_data fixture."""
@@ -140,8 +141,8 @@ class TestFixtures:
     def test_plugin_manager(self, plugin_manager):
         """Test the plugin_manager fixture."""
         assert plugin_manager is not None
-        assert hasattr(plugin_manager, 'load_plugins')
-        assert hasattr(plugin_manager, 'get_plugins')
+        assert hasattr(plugin_manager, "load_plugins")
+        assert hasattr(plugin_manager, "get_plugins")
 
     def test_sample_plugin_code(self, sample_plugin_code):
         """Test the sample_plugin_code fixture."""
@@ -162,6 +163,7 @@ class TestMarkedTests:
     def test_slow_marker(self):
         """Test that slow marker is recognized."""
         import time
+
         time.sleep(0.01)  # Small delay to qualify as slow
         assert True
 
@@ -234,6 +236,7 @@ class TestAsyncFixtures:
         """Test that async fixtures work correctly."""
         assert event_loop is not None
         import asyncio
+
         assert isinstance(asyncio.get_event_loop(), type(event_loop))
 
     @pytest.mark.asyncio

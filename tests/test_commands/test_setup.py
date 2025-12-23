@@ -1,10 +1,9 @@
 """
 Test setup command functionality.
 """
-import asyncio
+
 import os
-import tempfile
-from unittest.mock import AsyncMock, MagicMock, patch, mock_open
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -30,7 +29,7 @@ def mock_provider():
         endpoint="https://api.openai.com/v1",
         model="gpt-3.5-turbo",
         temperature=0.7,
-        max_tokens=2000
+        max_tokens=2000,
     )
 
 
@@ -149,7 +148,7 @@ class TestSetupCommandOpenAIConfiguration:
             "sk-test1234567890abcdef",  # api_key
             "gpt-4",  # model
             "0.7",  # temperature
-            "2000"  # max_tokens
+            "2000",  # max_tokens
         ]
 
         result = await setup_command._configure_openai()
@@ -169,7 +168,7 @@ class TestSetupCommandOpenAIConfiguration:
             "sk-test",  # api_key
             "",  # model (default)
             "",  # temperature (default)
-            ""  # max_tokens (default)
+            "",  # max_tokens (default)
         ]
 
         result = await setup_command._configure_openai()
@@ -207,7 +206,7 @@ class TestSetupCommandAnthropicConfiguration:
             "sk-ant-test03",  # api_key
             "claude-3-sonnet-20240229",  # model
             "0.5",  # temperature
-            "4000"  # max_tokens
+            "4000",  # max_tokens
         ]
 
         result = await setup_command._configure_anthropic()
@@ -225,7 +224,7 @@ class TestSetupCommandAnthropicConfiguration:
             "sk-ant-test",  # api_key
             "",  # model (default)
             "",  # temperature (default)
-            ""  # max_tokens (default)
+            "",  # max_tokens (default)
         ]
 
         result = await setup_command._configure_anthropic()
@@ -247,7 +246,7 @@ class TestSetupCommandOllamaConfiguration:
             "http://localhost:11434",  # endpoint
             "llama2",  # model
             "0.8",  # temperature
-            "2048"  # max_tokens
+            "2048",  # max_tokens
         ]
 
         result = await setup_command._configure_ollama()
@@ -265,7 +264,7 @@ class TestSetupCommandOllamaConfiguration:
             "",  # endpoint (default)
             "codellama",  # model
             "",  # temperature (default)
-            ""  # max_tokens (default)
+            "",  # max_tokens (default)
         ]
 
         result = await setup_command._configure_ollama()
@@ -285,7 +284,7 @@ class TestSetupCommandCustomConfiguration:
             "custom-key",  # api_key
             "custom-model",  # model
             "0.6",  # temperature
-            "1500"  # max_tokens
+            "1500",  # max_tokens
         ]
 
         result = await setup_command._configure_custom()
@@ -304,7 +303,7 @@ class TestSetupCommandCustomConfiguration:
             "http://localhost:8080",  # endpoint
             "local-model",  # model
             "0.9",  # temperature
-            "1024"  # max_tokens
+            "1024",  # max_tokens
         ]
 
         result = await setup_command._configure_custom()
@@ -317,7 +316,9 @@ class TestSetupCommandConnectionTest:
 
     @patch("vibe_coder.commands.setup.ClientFactory")
     @patch("vibe_coder.commands.setup.Progress")
-    async def test_connection_test_success(self, mock_progress, mock_factory, setup_command, mock_provider):
+    async def test_connection_test_success(
+        self, mock_progress, mock_factory, setup_command, mock_provider
+    ):
         """Test successful connection test."""
         mock_client = AsyncMock()
         mock_client.validate_connection.return_value = True
@@ -332,7 +333,9 @@ class TestSetupCommandConnectionTest:
 
     @patch("vibe_coder.commands.setup.ClientFactory")
     @patch("vibe_coder.commands.setup.Progress")
-    async def test_connection_test_failure(self, mock_progress, mock_factory, setup_command, mock_provider):
+    async def test_connection_test_failure(
+        self, mock_progress, mock_factory, setup_command, mock_provider
+    ):
         """Test failed connection test."""
         mock_client = AsyncMock()
         mock_client.validate_connection.return_value = False
@@ -449,11 +452,19 @@ class TestSetupCommandMainFlow:
         # No existing providers
         mock_config.list_providers.return_value = {}
 
-        with patch.object(setup_command, "_check_existing_config", new_callable=AsyncMock) as mock_check, \
-             patch.object(setup_command, "_select_provider_type", new_callable=AsyncMock) as mock_select, \
-             patch.object(setup_command, "_configure_openai", new_callable=AsyncMock) as mock_configure, \
-             patch.object(setup_command, "_test_connection", new_callable=AsyncMock) as mock_test, \
-             patch.object(setup_command, "_save_config", new_callable=AsyncMock) as mock_save:
+        with (
+            patch.object(
+                setup_command, "_check_existing_config", new_callable=AsyncMock
+            ) as mock_check,
+            patch.object(
+                setup_command, "_select_provider_type", new_callable=AsyncMock
+            ) as mock_select,
+            patch.object(
+                setup_command, "_configure_openai", new_callable=AsyncMock
+            ) as mock_configure,
+            patch.object(setup_command, "_test_connection", new_callable=AsyncMock) as mock_test,
+            patch.object(setup_command, "_save_config", new_callable=AsyncMock) as mock_save,
+        ):
 
             mock_check.return_value = False
             mock_select.return_value = "openai"
@@ -470,7 +481,9 @@ class TestSetupCommandMainFlow:
         """Test run with existing configuration."""
         mock_config.list_providers.return_value = {"existing": MagicMock()}
 
-        with patch.object(setup_command, "_check_existing_config", new_callable=AsyncMock) as mock_check:
+        with patch.object(
+            setup_command, "_check_existing_config", new_callable=AsyncMock
+        ) as mock_check:
             mock_check.return_value = True
 
             result = await setup_command.run()
@@ -478,8 +491,14 @@ class TestSetupCommandMainFlow:
 
     async def test_run_cancelled_provider_selection(self, setup_command):
         """Test run with cancelled provider selection."""
-        with patch.object(setup_command, "_check_existing_config", new_callable=AsyncMock) as mock_check, \
-             patch.object(setup_command, "_select_provider_type", new_callable=AsyncMock) as mock_select:
+        with (
+            patch.object(
+                setup_command, "_check_existing_config", new_callable=AsyncMock
+            ) as mock_check,
+            patch.object(
+                setup_command, "_select_provider_type", new_callable=AsyncMock
+            ) as mock_select,
+        ):
 
             mock_check.return_value = False
             mock_select.return_value = None
@@ -490,7 +509,9 @@ class TestSetupCommandMainFlow:
 
     async def test_run_keyboard_interrupt(self, setup_command):
         """Test run with keyboard interrupt."""
-        with patch.object(setup_command, "_check_existing_config", new_callable=AsyncMock) as mock_check:
+        with patch.object(
+            setup_command, "_check_existing_config", new_callable=AsyncMock
+        ) as mock_check:
             mock_check.side_effect = KeyboardInterrupt()
 
             with patch.object(setup_command.console, "print"):
@@ -499,7 +520,9 @@ class TestSetupCommandMainFlow:
 
     async def test_run_general_exception(self, setup_command):
         """Test run with general exception."""
-        with patch.object(setup_command, "_check_existing_config", new_callable=AsyncMock) as mock_check:
+        with patch.object(
+            setup_command, "_check_existing_config", new_callable=AsyncMock
+        ) as mock_check:
             mock_check.side_effect = Exception("Unexpected error")
 
             with patch.object(setup_command.console, "print"):

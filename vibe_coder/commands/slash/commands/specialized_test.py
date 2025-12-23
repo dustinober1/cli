@@ -3,7 +3,7 @@
 import json
 import re
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 from ..base import CommandContext, SlashCommand
 from ..file_ops import FileOperations
@@ -36,8 +36,11 @@ Examples:
 - /test-property sort.js --library jsverify"""
 
         filename = args[0]
-        options = {arg[2:]: arg[4:] if arg.startswith("--") and "=" in arg else True
-                  for arg in args[1:] if arg.startswith("--")}
+        options = {
+            arg[2:]: arg[4:] if arg.startswith("--") and "=" in arg else True
+            for arg in args[1:]
+            if arg.startswith("--")
+        }
 
         library = options.get("library", "hypothesis")
         num_properties = int(options.get("properties", "5"))
@@ -83,51 +86,61 @@ Complexity: {complexity}
 
         if language == "python":
             import ast
+
             try:
                 tree = ast.parse(content)
                 for node in ast.walk(tree):
                     if isinstance(node, ast.FunctionDef):
-                        if not node.name.startswith('_'):
+                        if not node.name.startswith("_"):
                             args = [arg.arg for arg in node.args.args]
-                            items.append({
-                                "type": "function",
-                                "name": node.name,
-                                "args": args,
-                                "doc": ast.get_docstring(node)
-                            })
+                            items.append(
+                                {
+                                    "type": "function",
+                                    "name": node.name,
+                                    "args": args,
+                                    "doc": ast.get_docstring(node),
+                                }
+                            )
                     elif isinstance(node, ast.ClassDef):
-                        methods = [n.name for n in node.body if isinstance(n, ast.FunctionDef) and not n.name.startswith('_')]
+                        methods = [
+                            n.name
+                            for n in node.body
+                            if isinstance(n, ast.FunctionDef) and not n.name.startswith("_")
+                        ]
                         if methods:
-                            items.append({
-                                "type": "class",
-                                "name": node.name,
-                                "methods": methods,
-                                "doc": ast.get_docstring(node)
-                            })
+                            items.append(
+                                {
+                                    "type": "class",
+                                    "name": node.name,
+                                    "methods": methods,
+                                    "doc": ast.get_docstring(node),
+                                }
+                            )
             except:
                 pass
 
         elif language in ["javascript", "typescript"]:
             # Simple regex extraction
-            func_pattern = r'(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)'
-            class_pattern = r'(?:export\s+)?class\s+(\w+)\s*\{'
+            func_pattern = r"(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)"
+            class_pattern = r"(?:export\s+)?class\s+(\w+)\s*\{"
 
             for match in re.finditer(func_pattern, content):
                 func_name = match.group(1)
-                if not func_name.startswith('_'):
-                    args = [arg.strip() for arg in match.group(2).split(',') if arg.strip()]
-                    items.append({
-                        "type": "function",
-                        "name": func_name,
-                        "args": args,
-                        "doc": None
-                    })
+                if not func_name.startswith("_"):
+                    args = [arg.strip() for arg in match.group(2).split(",") if arg.strip()]
+                    items.append({"type": "function", "name": func_name, "args": args, "doc": None})
 
         return items
 
-    async def _generate_property_tests(self, items: List[Dict], language: str,
-                                     library: str, num_properties: int,
-                                     complexity: str, context: CommandContext) -> str:
+    async def _generate_property_tests(
+        self,
+        items: List[Dict],
+        language: str,
+        library: str,
+        num_properties: int,
+        complexity: str,
+        context: CommandContext,
+    ) -> str:
         """Generate property-based test code."""
 
         prompt = f"""Generate {num_properties} property-based tests using {library} for {language}.
@@ -147,11 +160,16 @@ Requirements:
 
 Generate complete property-based tests that verify invariants and properties."""
 
-        response = await context.provider.client.send_request([
-            {"role": "system", "content": f"You are an expert in property-based testing using {library}. Generate tests that verify invariants and edge cases.",
-             "name": "PropertyTestGenerator"},
-            {"role": "user", "content": prompt}
-        ])
+        response = await context.provider.client.send_request(
+            [
+                {
+                    "role": "system",
+                    "content": f"You are an expert in property-based testing using {library}. Generate tests that verify invariants and edge cases.",
+                    "name": "PropertyTestGenerator",
+                },
+                {"role": "user", "content": prompt},
+            ]
+        )
 
         return response.content.strip()
 
@@ -184,8 +202,11 @@ Examples:
 - /test-fuzz image_processor.c --target process_image --dictionary"""
 
         filename = args[0]
-        options = {arg[2:]: arg[4:] if arg.startswith("--") and "=" in arg else True
-                  for arg in args[1:] if arg.startswith("--")}
+        options = {
+            arg[2:]: arg[4:] if arg.startswith("--") and "=" in arg else True
+            for arg in args[1:]
+            if arg.startswith("--")
+        }
 
         tool = options.get("tool", "afl")
         target_func = options.get("target")
@@ -244,9 +265,16 @@ Setup:
         except Exception as e:
             return f"Error creating fuzz setup: {e}"
 
-    async def _create_fuzz_setup(self, content: str, language: str, tool: str,
-                               target_func: str, duration: str, use_dictionary: bool,
-                               context: CommandContext) -> Dict[str, str]:
+    async def _create_fuzz_setup(
+        self,
+        content: str,
+        language: str,
+        tool: str,
+        target_func: str,
+        duration: str,
+        use_dictionary: bool,
+        context: CommandContext,
+    ) -> Dict[str, str]:
         """Create fuzzing setup files."""
 
         prompt = f"""Create a comprehensive fuzz testing setup for {language} code using {tool}.
@@ -271,11 +299,16 @@ The code to fuzz:
 
 Make sure to handle input/output properly and include necessary boilerplate."""
 
-        response = await context.provider.client.send_request([
-            {"role": "system", "content": f"You are a fuzz testing expert. Create production-ready fuzzing setups using {tool}.",
-             "name": "FuzzTestGenerator"},
-            {"role": "user", "content": prompt}
-        ])
+        response = await context.provider.client.send_request(
+            [
+                {
+                    "role": "system",
+                    "content": f"You are a fuzz testing expert. Create production-ready fuzzing setups using {tool}.",
+                    "name": "FuzzTestGenerator",
+                },
+                {"role": "user", "content": prompt},
+            ]
+        )
 
         content = response.content.strip()
 
@@ -284,7 +317,7 @@ Make sure to handle input/output properly and include necessary boilerplate."""
             "harness": content,
             "config": f"# {tool} configuration\n# Duration: {duration}\n# Dictionary: {use_dictionary}",
             "build_script": "#!/bin/bash\n# Build script for fuzzing",
-            "instructions": f"1. Install {tool}\n2. Run build.sh\n3. Start fuzzing"
+            "instructions": f"1. Install {tool}\n2. Run build.sh\n3. Start fuzzing",
         }
 
 
@@ -315,8 +348,11 @@ Examples:
 - /coverage-merge reports/ --threshold 80"""
 
         reports = [arg for arg in args if not arg.startswith("--")]
-        options = {arg[2:]: arg[4:] if arg.startswith("--") and "=" in arg else True
-                  for arg in args[1:] if arg.startswith("--")}
+        options = {
+            arg[2:]: arg[4:] if arg.startswith("--") and "=" in arg else True
+            for arg in args[1:]
+            if arg.startswith("--")
+        }
 
         format_type = options.get("format", "html")
         output_file = options.get("output", f"merged_coverage.{format_type}")
@@ -352,10 +388,7 @@ Examples:
 
             try:
                 result = subprocess.run(
-                    [sys.executable, script_file],
-                    capture_output=True,
-                    text=True,
-                    timeout=30
+                    [sys.executable, script_file], capture_output=True, text=True, timeout=30
                 )
 
                 if result.returncode == 0:
@@ -380,9 +413,15 @@ Open {output_file} to view the merged coverage report."""
         except Exception as e:
             return f"Error merging coverage reports: {e}"
 
-    async def _create_merge_script(self, reports: List[str], format_type: str,
-                                 output_file: str, threshold: str,
-                                 exclude_pattern: str, context: CommandContext) -> str:
+    async def _create_merge_script(
+        self,
+        reports: List[str],
+        format_type: str,
+        output_file: str,
+        threshold: str,
+        exclude_pattern: str,
+        context: CommandContext,
+    ) -> str:
         """Create Python script to merge coverage."""
 
         script = f'''#!/usr/bin/env python3
@@ -447,8 +486,11 @@ Examples:
 - /mutation app.js --tool stryker --report html"""
 
         target = args[0]
-        options = {arg[2:]: arg[4:] if arg.startswith("--") and "=" in arg else True
-                  for arg in args[1:] if arg.startswith("--")}
+        options = {
+            arg[2:]: arg[4:] if arg.startswith("--") and "=" in arg else True
+            for arg in args[1:]
+            if arg.startswith("--")
+        }
 
         tool = options.get("tool", "mutmut")
         threshold = options.get("threshold", "80")
@@ -497,9 +539,16 @@ Example commands:
         except Exception as e:
             return f"Error creating mutation setup: {e}"
 
-    async def _create_mutation_config(self, target_files: List[str], language: str,
-                                    tool: str, threshold: str, tests: str,
-                                    exclude: str, context: CommandContext) -> str:
+    async def _create_mutation_config(
+        self,
+        target_files: List[str],
+        language: str,
+        tool: str,
+        threshold: str,
+        tests: str,
+        exclude: str,
+        context: CommandContext,
+    ) -> str:
         """Create mutation testing configuration."""
 
         prompt = f"""Create a comprehensive mutation testing configuration for {tool}.
@@ -521,11 +570,16 @@ Generate a configuration that:
 
 Create production-ready configuration for {tool}."""
 
-        response = await context.provider.client.send_request([
-            {"role": "system", "content": f"You are a mutation testing expert. Create configurations that balance thoroughness with performance.",
-             "name": "MutationConfigGenerator"},
-            {"role": "user", "content": prompt}
-        ])
+        response = await context.provider.client.send_request(
+            [
+                {
+                    "role": "system",
+                    "content": f"You are a mutation testing expert. Create configurations that balance thoroughness with performance.",
+                    "name": "MutationConfigGenerator",
+                },
+                {"role": "user", "content": prompt},
+            ]
+        )
 
         return response.content.strip()
 
@@ -538,6 +592,7 @@ command_registry.register(PropertyTestCommand())
 command_registry.register(FuzzTestCommand())
 command_registry.register(CoverageMergeCommand())
 command_registry.register(MutationTestCommand())
+
 
 def register():
     """Register all specialized test commands."""

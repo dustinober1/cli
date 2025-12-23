@@ -6,7 +6,7 @@ operation type, and conversation history.
 """
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 if TYPE_CHECKING:
     from vibe_coder.analytics.token_counter import TokenCounter
@@ -116,8 +116,7 @@ class TokenBudgeter:
 
         # Get operation-specific allocations
         op_allocations = self.OPERATION_ALLOCATIONS.get(
-            request.operation_type,
-            self.OPERATION_ALLOCATIONS["generate"]
+            request.operation_type, self.OPERATION_ALLOCATIONS["generate"]
         )
 
         # Calculate initial allocations
@@ -196,7 +195,10 @@ class TokenBudgeter:
                 if used_tokens + item.token_count > budget.available:
                     # Try to summarize the item
                     summarized_item = await self._summarize_item(item)
-                    if summarized_item and used_tokens + summarized_item.token_count <= budget.available:
+                    if (
+                        summarized_item
+                        and used_tokens + summarized_item.token_count <= budget.available
+                    ):
                         result.append(summarized_item)
                         used_tokens += summarized_item.token_count
                         allocations_used[allocation_key] += summarized_item.token_count

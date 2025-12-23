@@ -2,7 +2,7 @@
 
 import subprocess
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 from ..base import CommandContext, SlashCommand
 from ..git_ops import GitOperations
@@ -49,7 +49,7 @@ Example:
                 ["git", "bisect", "log"],
                 capture_output=True,
                 text=True,
-                cwd=context.working_directory
+                cwd=context.working_directory,
             )
 
             if bisect_status.returncode == 0 and bisect_status.stdout.strip():
@@ -74,7 +74,7 @@ Options:
                 ["git", "bisect", "start"],
                 capture_output=True,
                 text=True,
-                cwd=context.working_directory
+                cwd=context.working_directory,
             )
 
             if bisect_start.returncode != 0:
@@ -85,14 +85,14 @@ Options:
                 ["git", "bisect", "bad", end_commit],
                 capture_output=True,
                 text=True,
-                cwd=context.working_directory
+                cwd=context.working_directory,
             )
 
             subprocess.run(
                 ["git", "bisect", "good", start_commit],
                 capture_output=True,
                 text=True,
-                cwd=context.working_directory
+                cwd=context.working_directory,
             )
 
             # Run automated bisect
@@ -101,7 +101,7 @@ Options:
                     ["git", "bisect", "run", test_command],
                     capture_output=True,
                     text=True,
-                    cwd=context.working_directory
+                    cwd=context.working_directory,
                 )
 
                 # Get bisect results
@@ -109,7 +109,7 @@ Options:
                     ["git", "bisect", "log"],
                     capture_output=True,
                     text=True,
-                    cwd=context.working_directory
+                    cwd=context.working_directory,
                 )
 
                 return f"""
@@ -198,14 +198,10 @@ Bisect script created: {bisect_script}
         return None
 
     async def _create_bisect_script(
-        self,
-        context: CommandContext,
-        test_command: str,
-        start_commit: str,
-        end_commit: str
+        self, context: CommandContext, test_command: str, start_commit: str, end_commit: str
     ) -> str:
         """Create a bisect script for reproducibility."""
-        script_content = f'''#!/bin/bash
+        script_content = f"""#!/bin/bash
 # Git bisect script for finding the bug
 
 # Bisect range: {start_commit} (good) → {end_commit} (bad)
@@ -223,7 +219,7 @@ echo "Bisect complete. First bad commit:"
 git bisect log | grep "first bad commit"
 
 echo "\\nTo reset bisect, run: git bisect reset"
-'''
+"""
 
         script_path = Path(context.working_directory) / "bisect_bug.sh"
         script_path.write_text(script_content)
@@ -233,7 +229,7 @@ echo "\\nTo reset bisect, run: git bisect reset"
 
     def _extract_first_bad_commit(self, log_output: str) -> str:
         """Extract the first bad commit from bisect log."""
-        for line in log_output.split('\n'):
+        for line in log_output.split("\n"):
             if "first bad commit" in line:
                 # Extract commit hash
                 parts = line.split()
@@ -358,9 +354,7 @@ git reset --hard HEAD@{{n}}
         except Exception as e:
             return f"Error with rebase: {e}"
 
-    async def _check_rebase_conflicts(
-        self, context: CommandContext, target: str
-    ) -> List[tuple]:
+    async def _check_rebase_conflicts(self, context: CommandContext, target: str) -> List[tuple]:
         """Check for potential rebase conflicts."""
         conflicts = []
 
@@ -371,7 +365,7 @@ git reset --hard HEAD@{{n}}
                 ["git", "merge-base", "HEAD", target],
                 capture_output=True,
                 text=True,
-                cwd=context.working_directory
+                cwd=context.working_directory,
             )
 
             if merge_base.returncode != 0:
@@ -382,20 +376,28 @@ git reset --hard HEAD@{{n}}
                 ["git", "diff", "--name-only", merge_base.stdout.strip(), "HEAD"],
                 capture_output=True,
                 text=True,
-                cwd=context.working_directory
+                cwd=context.working_directory,
             )
 
             if diff_result.returncode == 0:
-                changed_files = diff_result.stdout.strip().split('\n')
+                changed_files = diff_result.stdout.strip().split("\n")
 
                 # Check if target also changed these files
                 for file in changed_files:
                     if file:
                         target_diff = subprocess.run(
-                            ["git", "diff", "--name-only", merge_base.stdout.strip(), target, "--", file],
+                            [
+                                "git",
+                                "diff",
+                                "--name-only",
+                                merge_base.stdout.strip(),
+                                target,
+                                "--",
+                                file,
+                            ],
                             capture_output=True,
                             text=True,
-                            cwd=context.working_directory
+                            cwd=context.working_directory,
                         )
 
                         if target_diff.returncode == 0 and target_diff.stdout.strip():
@@ -406,9 +408,7 @@ git reset --hard HEAD@{{n}}
 
         return conflicts
 
-    async def _auto_squash_commits(
-        self, context: CommandContext, target: str
-    ) -> str:
+    async def _auto_squash_commits(self, context: CommandContext, target: str) -> str:
         """Analyze commits and suggest squashing."""
         try:
             # Get commit list
@@ -416,20 +416,20 @@ git reset --hard HEAD@{{n}}
                 ["git", "log", "--oneline", f"{target}..HEAD"],
                 capture_output=True,
                 text=True,
-                cwd=context.working_directory
+                cwd=context.working_directory,
             )
 
             if commits.returncode != 0:
                 return "Could not retrieve commit history"
 
-            commit_lines = commits.stdout.strip().split('\n')
-            if not commit_lines or commit_lines == ['']:
+            commit_lines = commits.stdout.strip().split("\n")
+            if not commit_lines or commit_lines == [""]:
                 return "No commits to analyze"
 
             # Group commits by message patterns
             groups = {}
             for line in commit_lines:
-                parts = line.split(' ', 1)
+                parts = line.split(" ", 1)
                 if len(parts) == 2:
                     hash_val, message = parts
                     # Simple grouping by first word
@@ -452,9 +452,7 @@ git reset --hard HEAD@{{n}}
         except Exception as e:
             return f"Error analyzing commits: {e}"
 
-    async def _generate_rebase_plan(
-        self, context: CommandContext, target: str
-    ) -> str:
+    async def _generate_rebase_plan(self, context: CommandContext, target: str) -> str:
         """Generate an interactive rebase plan."""
         try:
             # Get detailed commit info
@@ -462,19 +460,19 @@ git reset --hard HEAD@{{n}}
                 ["git", "log", "--oneline", "--format=%h %s", f"{target}..HEAD"],
                 capture_output=True,
                 text=True,
-                cwd=context.working_directory
+                cwd=context.working_directory,
             )
 
             if commits.returncode != 0:
                 return "Could not generate rebase plan"
 
-            commit_lines = commits.stdout.strip().split('\n')
+            commit_lines = commits.stdout.strip().split("\n")
             plan = ""
 
             for line in commit_lines:
                 if not line:
                     continue
-                parts = line.split(' ', 1)
+                parts = line.split(" ", 1)
                 hash_val = parts[0]
                 message = parts[1] if len(parts) > 1 else ""
 
@@ -589,9 +587,7 @@ git cherry-pick <start>..<end>
         except Exception as e:
             return f"Error with cherry-pick: {e}"
 
-    async def _find_commit_dependencies(
-        self, context: CommandContext, commit: str
-    ) -> List[str]:
+    async def _find_commit_dependencies(self, context: CommandContext, commit: str) -> List[str]:
         """Find commits that depend on the given commit."""
         try:
             # Get commit hash (handle short hashes)
@@ -599,7 +595,7 @@ git cherry-pick <start>..<end>
                 ["git", "rev-parse", commit],
                 capture_output=True,
                 text=True,
-                cwd=context.working_directory
+                cwd=context.working_directory,
             )
 
             if full_hash.returncode != 0:
@@ -610,14 +606,14 @@ git cherry-pick <start>..<end>
                 ["git", "log", "--grep", full_hash.stdout.strip(), "--oneline"],
                 capture_output=True,
                 text=True,
-                cwd=context.working_directory
+                cwd=context.working_directory,
             )
 
             if find_refs.returncode != 0:
                 return []
 
             refs = []
-            for line in find_refs.stdout.strip().split('\n'):
+            for line in find_refs.stdout.strip().split("\n"):
                 if line:
                     hash_val = line.split()[0]
                     if hash_val != full_hash.stdout.strip():
@@ -628,9 +624,7 @@ git cherry-pick <start>..<end>
         except Exception:
             return []
 
-    async def _check_cherry_pick_conflicts(
-        self, context: CommandContext, commit: str
-    ) -> str:
+    async def _check_cherry_pick_conflicts(self, context: CommandContext, commit: str) -> str:
         """Check for potential cherry-pick conflicts."""
         try:
             # Simulate cherry-pick to check conflicts
@@ -640,7 +634,7 @@ git cherry-pick <start>..<end>
                 ["git", "checkout", "-b", temp_branch],
                 capture_output=True,
                 text=True,
-                cwd=context.working_directory
+                cwd=context.working_directory,
             )
 
             # Try cherry-pick with --no-commit
@@ -648,7 +642,7 @@ git cherry-pick <start>..<end>
                 ["git", "cherry-pick", "--no-commit", commit],
                 capture_output=True,
                 text=True,
-                cwd=context.working_directory
+                cwd=context.working_directory,
             )
 
             # Check for conflicts
@@ -673,13 +667,13 @@ git cherry-pick <start>..<end>
                 ["git", "show", "--stat", "--format=fuller", commit],
                 capture_output=True,
                 text=True,
-                cwd=context.working_directory
+                cwd=context.working_directory,
             )
 
             if result.returncode == 0:
                 # Limit output to first 20 lines
-                lines = result.stdout.split('\n')[:20]
-                return '\n'.join(lines)
+                lines = result.stdout.split("\n")[:20]
+                return "\n".join(lines)
 
             return "Could not retrieve commit details"
 
@@ -700,6 +694,7 @@ from ..registry import command_registry
 command_registry.register(GitBisectCommand())
 command_registry.register(GitRebaseCommand())
 command_registry.register(GitCherryPickCommand())
+
 
 def register():
     """Register all advanced Git commands."""

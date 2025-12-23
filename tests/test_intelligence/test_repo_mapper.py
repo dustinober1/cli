@@ -5,18 +5,12 @@ This module tests the RepositoryMapper class which provides high-level
 repository scanning, dependency graph building, and caching capabilities.
 """
 
-import asyncio
-import json
-import os
-import tempfile
-from datetime import datetime
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from vibe_coder.intelligence.repo_mapper import RepositoryMapper
-from vibe_coder.intelligence.types import FileNode, FunctionSignature, RepositoryMap
+from vibe_coder.intelligence.types import FileNode, FunctionSignature
 
 
 class TestRepositoryMapperInitialization:
@@ -203,7 +197,7 @@ class TestClass:
     async def test_create_basic_file_node(self, tmp_path):
         """Test creating a basic file node for non-Python files."""
         # Create a JavaScript file
-        js_content = '''
+        js_content = """
 // JavaScript file
 function greet(name) {
     return `Hello, ${name}!`;
@@ -214,7 +208,7 @@ class Calculator {
         return a + b;
     }
 }
-'''
+"""
         js_file = tmp_path / "script.js"
         js_file.write_text(js_content)
 
@@ -259,25 +253,19 @@ class TestDependencyGraph:
                 path="main.py",
                 language="python",
                 imports=["utils", "os", "sys"],
-                dependencies=set()
+                dependencies=set(),
             ),
             "utils.py": FileNode(
-                path="utils.py",
-                language="python",
-                imports=["helpers"],
-                dependencies=set()
+                path="utils.py", language="python", imports=["helpers"], dependencies=set()
             ),
             "helpers.py": FileNode(
-                path="helpers.py",
-                language="python",
-                imports=[],
-                dependencies=set()
+                path="helpers.py", language="python", imports=[], dependencies=set()
             ),
             "external.py": FileNode(
                 path="external.py",
                 language="python",
                 imports=["external_lib"],  # Not in repository
-                dependencies=set()
+                dependencies=set(),
             ),
         }
 
@@ -325,7 +313,8 @@ class TestRepositoryScanning:
     async def test_scan_small_repository(self, tmp_path):
         """Test scanning a small repository."""
         # Create a simple project structure
-        (tmp_path / "main.py").write_text("""
+        (tmp_path / "main.py").write_text(
+            """
 import utils
 
 def main():
@@ -333,16 +322,21 @@ def main():
 
 if __name__ == "__main__":
     main()
-""")
-        (tmp_path / "utils.py").write_text("""
+"""
+        )
+        (tmp_path / "utils.py").write_text(
+            """
 def helper():
     return "help"
-""")
+"""
+        )
         (tmp_path / "tests").mkdir()
-        (tmp_path / "tests" / "test_main.py").write_text("""
+        (tmp_path / "tests" / "test_main.py").write_text(
+            """
 def test_main():
     assert True
-""")
+"""
+        )
 
         mapper = RepositoryMapper(str(tmp_path))
         repo_map = await mapper.scan_repository(use_cache=False)
@@ -381,13 +375,21 @@ def test_main():
 
         # Create multiple files
         files_content = {
-            "src/main.py": "from utils import helper\nfrom models import User\n\ndef main():\n    pass",
+            "src/main.py": (
+                "from utils import helper\nfrom models import User\n\ndef main():\n    pass"
+            ),
             "src/utils/helper.py": "def helper():\n    return 'help'",
             "src/utils/formatter.py": "def format(data):\n    return str(data)",
-            "src/models/user.py": "class User:\n    def __init__(self, name):\n        self.name = name",
+            "src/models/user.py": (
+                "class User:\n    def __init__(self, name):\n        self.name = name"
+            ),
             "src/models/base.py": "class BaseModel:\n    pass",
-            "tests/unit/test_helper.py": "def test_helper():\n    assert helper() == 'help'",
-            "tests/integration/test_models.py": "def test_user():\n    u = User('test')\n    assert u.name == 'test'",
+            "tests/unit/test_helper.py": (
+                "def test_helper():\n    assert helper() == 'help'"
+            ),
+            "tests/integration/test_models.py": (
+                "def test_user():\n    u = User('test')\n    assert u.name == 'test'"
+            ),
         }
 
         for file_path, content in files_content.items():
@@ -408,35 +410,41 @@ def test_main():
             "cli.py": FileNode(
                 path="cli.py",
                 language="python",
-                functions=[FunctionSignature(
-                    name="main",
-                    module_path="cli",
-                    file_path="cli.py",
-                    line_start=10,
-                    line_end=20
-                )]
+                functions=[
+                    FunctionSignature(
+                        name="main",
+                        module_path="cli",
+                        file_path="cli.py",
+                        line_start=10,
+                        line_end=20,
+                    )
+                ],
             ),
             "main.py": FileNode(
                 path="main.py",
                 language="python",
-                functions=[FunctionSignature(
-                    name="main",
-                    module_path="main",
-                    file_path="main.py",
-                    line_start=5,
-                    line_end=15
-                )]
+                functions=[
+                    FunctionSignature(
+                        name="main",
+                        module_path="main",
+                        file_path="main.py",
+                        line_start=5,
+                        line_end=15,
+                    )
+                ],
             ),
             "utils.py": FileNode(
                 path="utils.py",
                 language="python",
-                functions=[FunctionSignature(
-                    name="helper",
-                    module_path="utils",
-                    file_path="utils.py",
-                    line_start=1,
-                    line_end=5
-                )]
+                functions=[
+                    FunctionSignature(
+                        name="helper",
+                        module_path="utils",
+                        file_path="utils.py",
+                        line_start=1,
+                        line_end=5,
+                    )
+                ],
             ),
         }
 
@@ -504,14 +512,18 @@ class TestCompressedRepresentation:
     async def test_compress_representation_small_repo(self, tmp_path):
         """Test compressing a small repository representation."""
         # Create a simple repository
-        (tmp_path / "main.py").write_text("""
+        (tmp_path / "main.py").write_text(
+            """
 def main():
     print("Hello, World!")
-""")
-        (tmp_path / "utils.py").write_text("""
+"""
+        )
+        (tmp_path / "utils.py").write_text(
+            """
 def helper():
     return "help"
-""")
+"""
+        )
 
         mapper = RepositoryMapper(str(tmp_path))
         await mapper.scan_repository(use_cache=False)
@@ -530,7 +542,8 @@ def helper():
         """Test compression respects token limits."""
         # Create many files to exceed token limit
         for i in range(20):
-            (tmp_path / f"module_{i}.py").write_text(f"""
+            (tmp_path / f"module_{i}.py").write_text(
+                f"""
 # Module {i}
 def function_{i}():
     return {i}
@@ -538,7 +551,8 @@ def function_{i}():
 class Class{i}:
     def method(self):
         return {i}
-""")
+"""
+            )
 
         mapper = RepositoryMapper(str(tmp_path))
         await mapper.scan_repository(use_cache=False)
@@ -554,23 +568,29 @@ class Class{i}:
     async def test_get_context_for_file(self, tmp_path):
         """Test getting context for a specific file."""
         # Create files with dependencies
-        (tmp_path / "main.py").write_text("""
+        (tmp_path / "main.py").write_text(
+            """
 import utils
 from models import User
 
 def main():
     user = User("test")
     utils.helper(user)
-""")
-        (tmp_path / "utils.py").write_text("""
+"""
+        )
+        (tmp_path / "utils.py").write_text(
+            """
 def helper(user):
     return user
-""")
-        (tmp_path / "models.py").write_text("""
+"""
+        )
+        (tmp_path / "models.py").write_text(
+            """
 class User:
     def __init__(self, name):
         self.name = name
-""")
+"""
+        )
 
         mapper = RepositoryMapper(str(tmp_path))
         await mapper.scan_repository(use_cache=False)
@@ -743,7 +763,7 @@ class TestStatisticsAndMonitoring:
         mapper = RepositoryMapper(str(tmp_path), enable_monitoring=True)
 
         # Mock file watcher
-        with patch('vibe_coder.intelligence.repo_mapper.FileWatcher') as mock_watcher:
+        with patch("vibe_coder.intelligence.repo_mapper.FileWatcher") as mock_watcher:
             mock_instance = MagicMock()
             mock_watcher.return_value = mock_instance
 
@@ -818,9 +838,7 @@ class TestImportanceBasedCompression:
 
         # Get context items with target
         items = await mapper.get_context_items(
-            target_file="target.py",
-            operation="fix",
-            max_items=10
+            target_file="target.py", operation="fix", max_items=10
         )
 
         assert len(items) == 3

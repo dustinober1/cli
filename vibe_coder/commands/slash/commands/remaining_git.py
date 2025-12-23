@@ -2,7 +2,7 @@
 
 import subprocess
 from pathlib import Path
-from typing import List, Optional, Dict
+from typing import Dict, List, Optional
 
 from ..base import CommandContext, SlashCommand
 from ..file_ops import FileOperations
@@ -47,9 +47,7 @@ Examples:
         try:
             # Check if we're in a git repo
             result = subprocess.run(
-                ["git", "rev-parse", "--git-dir"],
-                capture_output=True,
-                text=True
+                ["git", "rev-parse", "--git-dir"], capture_output=True, text=True
             )
             if result.returncode != 0:
                 return "❌ Not in a Git repository"
@@ -74,17 +72,13 @@ Auto-commit: {not no_commit}"""
 
             # Save current branch if switching
             current_branch = subprocess.run(
-                ["git", "branch", "--show-current"],
-                capture_output=True,
-                text=True
+                ["git", "branch", "--show-current"], capture_output=True, text=True
             ).stdout.strip()
 
             # Switch to target branch if specified
             if target_branch and target_branch != current_branch:
                 result = subprocess.run(
-                    ["git", "checkout", target_branch],
-                    capture_output=True,
-                    text=True
+                    ["git", "checkout", target_branch], capture_output=True, text=True
                 )
                 if result.returncode != 0:
                     return f"❌ Failed to checkout {target_branch}: {result.stderr}"
@@ -127,22 +121,17 @@ Auto-commit: {not no_commit}"""
             result = subprocess.run(
                 ["git", "show", "--format=%H|%an|%s", "--name-only", commit],
                 capture_output=True,
-                text=True
+                text=True,
             )
 
             if result.returncode != 0:
                 return None
 
-            lines = result.stdout.split('\n')
-            header = lines[0].split('|')
+            lines = result.stdout.split("\n")
+            header = lines[0].split("|")
             files = [f for f in lines[1:] if f]
 
-            return {
-                "hash": header[0],
-                "author": header[1],
-                "message": header[2],
-                "files": files
-            }
+            return {"hash": header[0], "author": header[1], "message": header[2], "files": files}
         except:
             return None
 
@@ -203,11 +192,9 @@ Examples:
         try:
             # Get recent history
             result = subprocess.run(
-                ["git", "log", "--oneline", "-10"],
-                capture_output=True,
-                text=True
+                ["git", "log", "--oneline", "-10"], capture_output=True, text=True
             )
-            recent_commits = result.stdout.split('\n') if result.returncode == 0 else []
+            recent_commits = result.stdout.split("\n") if result.returncode == 0 else []
 
             if action == "commit":
                 return await self._undo_commit(keep, hard, recent_commits)
@@ -232,17 +219,13 @@ Examples:
             # Reset to keep N commits
             target = recent_commits[keep].split()[0] if len(recent_commits) > keep else "HEAD~1"
             result = subprocess.run(
-                ["git", "reset", "--soft", target],
-                capture_output=True,
-                text=True
+                ["git", "reset", "--soft", target], capture_output=True, text=True
             )
             action = "soft-reset"
         else:
             # Undo last commit
             result = subprocess.run(
-                ["git", "reset", "--soft", "HEAD~1"],
-                capture_output=True,
-                text=True
+                ["git", "reset", "--soft", "HEAD~1"], capture_output=True, text=True
             )
             action = "undone"
 
@@ -254,11 +237,7 @@ Examples:
     async def _undo_push(self, keep: int, recent_commits: List[str]) -> str:
         """Undo a push."""
         # Get current branch
-        result = subprocess.run(
-            ["git", "branch", "--show-current"],
-            capture_output=True,
-            text=True
-        )
+        result = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True)
         branch = result.stdout.strip() if result.returncode == 0 else "main"
 
         # Force push to undo
@@ -270,7 +249,7 @@ Examples:
         result = subprocess.run(
             ["git", "push", "--force-with-lease", "origin", f"{branch}:{branch}"],
             capture_output=True,
-            text=True
+            text=True,
         )
 
         if result.returncode == 0:
@@ -281,26 +260,20 @@ Examples:
     async def _undo_merge(self, hard: bool) -> str:
         """Undo a merge."""
         # Check if we're in a merge
-        result = subprocess.run(
-            ["git", "status", "--porcelain"],
-            capture_output=True,
-            text=True
-        )
+        result = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True)
 
         if "MERGE_HEAD" not in result.stdout:
             # Abort last merge if clean
             result = subprocess.run(
-                ["git", "log", "--oneline", "-5", "--merges"],
-                capture_output=True,
-                text=True
+                ["git", "log", "--oneline", "-5", "--merges"], capture_output=True, text=True
             )
 
             if result.returncode == 0 and result.stdout:
-                last_merge = result.stdout.split('\n')[0].split()[0]
+                last_merge = result.stdout.split("\n")[0].split()[0]
                 result = subprocess.run(
                     ["git", "reset", "--hard" if hard else "--soft", f"{last_merge}^"],
                     capture_output=True,
-                    text=True
+                    text=True,
                 )
                 return "✅ Last merge undone"
             else:
@@ -314,21 +287,17 @@ Examples:
         """Undo a rebase."""
         # Check reflog for rebase
         result = subprocess.run(
-            ["git", "reflog", "-10", "--oneline"],
-            capture_output=True,
-            text=True
+            ["git", "reflog", "-10", "--oneline"], capture_output=True, text=True
         )
 
         if result.returncode == 0:
-            for line in result.stdout.split('\n'):
+            for line in result.stdout.split("\n"):
                 if "rebase" in line and "finished" in line:
                     # Get the pre-rebase commit
                     parts = line.split()
                     if len(parts) > 1:
                         result = subprocess.run(
-                            ["git", "reset", "--hard", parts[0]],
-                            capture_output=True,
-                            text=True
+                            ["git", "reset", "--hard", parts[0]], capture_output=True, text=True
                         )
                         return f"✅ Rebase undone. Reset to {parts[0]}"
 
@@ -337,9 +306,7 @@ Examples:
     async def _reset_to_commit(self, commit: str, hard: bool) -> str:
         """Reset to a specific commit."""
         result = subprocess.run(
-            ["git", "reset", "--hard" if hard else "--soft", commit],
-            capture_output=True,
-            text=True
+            ["git", "reset", "--hard" if hard else "--soft", commit], capture_output=True, text=True
         )
 
         if result.returncode == 0:
@@ -371,11 +338,7 @@ class GitCleanCommand(SlashCommand):
 
         try:
             # Get all branches
-            result = subprocess.run(
-                ["git", "branch", "-a"],
-                capture_output=True,
-                text=True
-            )
+            result = subprocess.run(["git", "branch", "-a"], capture_output=True, text=True)
 
             if result.returncode != 0:
                 return "❌ Failed to list branches"
@@ -383,35 +346,41 @@ class GitCleanCommand(SlashCommand):
             branches = []
             current = None
 
-            for line in result.stdout.split('\n'):
+            for line in result.stdout.split("\n"):
                 line = line.strip()
                 if not line:
                     continue
 
-                if line.startswith('*'):
+                if line.startswith("*"):
                     current = line[2:].split()[0]
                     branches.append(line[2:])
                 else:
                     branches.append(line[2:])
 
             # Filter branches
-            local_branches = [b for b in branches if not b.startswith('remotes/')]
-            remote_branches = [b.replace('remotes/origin/', '') for b in branches if b.startswith('remotes/origin/')]
+            local_branches = [b for b in branches if not b.startswith("remotes/")]
+            remote_branches = [
+                b.replace("remotes/origin/", "")
+                for b in branches
+                if b.startswith("remotes/origin/")
+            ]
 
             # Get merged branches
             if merged_only:
                 result = subprocess.run(
-                    ["git", "branch", "--merged"],
-                    capture_output=True,
-                    text=True
+                    ["git", "branch", "--merged"], capture_output=True, text=True
                 )
                 if result.returncode == 0:
-                    merged = set(line.strip('* ').strip() for line in result.stdout.split('\n') if line.strip())
+                    merged = set(
+                        line.strip("* ").strip()
+                        for line in result.stdout.split("\n")
+                        if line.strip()
+                    )
                     local_branches = [b for b in local_branches if b in merged]
                     remote_branches = [b for b in remote_branches if b in merged]
 
             # Remove current and main/master branches
-            protected = {'main', 'master', 'develop', 'dev', current}
+            protected = {"main", "master", "develop", "dev", current}
             if current in protected:
                 protected.remove(current)
 
@@ -433,7 +402,7 @@ class GitCleanCommand(SlashCommand):
 
             if not deletable_local and not deletable_remote:
                 output.append("\n✨ No branches to clean up")
-                return '\n'.join(output)
+                return "\n".join(output)
 
             if not dry_run:
                 deleted = []
@@ -442,7 +411,7 @@ class GitCleanCommand(SlashCommand):
                     result = subprocess.run(
                         ["git", "branch", "-D" if force else "-d", branch],
                         capture_output=True,
-                        text=True
+                        text=True,
                     )
                     if result.returncode == 0:
                         deleted.append(branch)
@@ -453,7 +422,7 @@ class GitCleanCommand(SlashCommand):
                         result = subprocess.run(
                             ["git", "push", "origin", "--delete", branch],
                             capture_output=True,
-                            text=True
+                            text=True,
                         )
                         if result.returncode == 0:
                             deleted.append(f"origin/{branch}")
@@ -466,7 +435,7 @@ class GitCleanCommand(SlashCommand):
             else:
                 output.append(f"\n🔍 Dry run mode. Use --force to actually delete.")
 
-            return '\n'.join(output)
+            return "\n".join(output)
 
         except Exception as e:
             return f"Error during branch cleanup: {e}"
@@ -501,8 +470,11 @@ Examples:
 - /git-release v3.0.0 --create-branch"""
 
         version = args[0]
-        options = {arg[2:]: arg[4:] if arg.startswith("--") and "=" in arg else True
-                  for arg in args[1:] if arg.startswith("--")}
+        options = {
+            arg[2:]: arg[4:] if arg.startswith("--") and "=" in arg else True
+            for arg in args[1:]
+            if arg.startswith("--")
+        }
 
         branch = options.get("branch", "main")
         is_pre_release = options.get("pre", False)
@@ -515,17 +487,13 @@ Examples:
         try:
             # Get current branch
             result = subprocess.run(
-                ["git", "branch", "--show-current"],
-                capture_output=True,
-                text=True
+                ["git", "branch", "--show-current"], capture_output=True, text=True
             )
             current_branch = result.stdout.strip() if result.returncode == 0 else "main"
 
             # Check if working directory is clean
             result = subprocess.run(
-                ["git", "status", "--porcelain"],
-                capture_output=True,
-                text=True
+                ["git", "status", "--porcelain"], capture_output=True, text=True
             )
 
             if result.stdout.strip():
@@ -543,9 +511,7 @@ Examples:
             if create_branch:
                 release_branch = f"release/{version}"
                 result = subprocess.run(
-                    ["git", "checkout", "-b", release_branch],
-                    capture_output=True,
-                    text=True
+                    ["git", "checkout", "-b", release_branch], capture_output=True, text=True
                 )
                 if result.returncode == 0:
                     steps.append(f"Created release branch: {release_branch}")
@@ -567,9 +533,7 @@ Examples:
             # Create annotated tag
             tag_message = f"Release {tag_name}\n\n{release_notes}"
             result = subprocess.run(
-                ["git", "tag", "-a", tag_name, "-m", tag_message],
-                capture_output=True,
-                text=True
+                ["git", "tag", "-a", tag_name, "-m", tag_message], capture_output=True, text=True
             )
 
             if result.returncode == 0:
@@ -587,19 +551,23 @@ Examples:
 
                 # Push release branch if created
                 if create_branch:
-                    subprocess.run(["git", "push", "-u", "origin", f"release/{version}"], capture_output=True)
+                    subprocess.run(
+                        ["git", "push", "-u", "origin", f"release/{version}"], capture_output=True
+                    )
 
                 steps.append("Pushed to remote")
 
             # 5. Create GitHub release (placeholder)
             if not no_push:
-                steps.append(f"📝 Create GitHub release at: https://github.com/user/repo/releases/new?tag={tag_name}")
+                steps.append(
+                    f"📝 Create GitHub release at: https://github.com/user/repo/releases/new?tag={tag_name}"
+                )
 
             output = [f"🚀 Release {version} prepared"]
             output.extend(steps)
             output.append(f"\nRelease notes:\n{release_notes}")
 
-            return '\n'.join(output)
+            return "\n".join(output)
 
         except Exception as e:
             return f"Error preparing release: {e}"
@@ -615,7 +583,7 @@ Examples:
             "package.json",
             "pyproject.toml",
             "Cargo.toml",
-            "pom.xml"
+            "pom.xml",
         ]
 
         for file_path in version_files:
@@ -623,7 +591,7 @@ Examples:
                 try:
                     content = await file_ops.read_file(file_path)
                     # Simple version replacement
-                    new_content = content.replace('0.0.0', version)
+                    new_content = content.replace("0.0.0", version)
                     if new_content != content:
                         await file_ops.write_file(file_path, new_content)
                         updated.append(file_path)
@@ -637,9 +605,7 @@ Examples:
         try:
             # Get last tag
             result = subprocess.run(
-                ["git", "describe", "--tags", "--abbrev=0"],
-                capture_output=True,
-                text=True
+                ["git", "describe", "--tags", "--abbrev=0"], capture_output=True, text=True
             )
 
             if result.returncode == 0:
@@ -648,19 +614,19 @@ Examples:
                 result = subprocess.run(
                     ["git", "log", f"{last_tag}..HEAD", "--oneline", "--no-merges"],
                     capture_output=True,
-                    text=True
+                    text=True,
                 )
             else:
                 # Get last 20 commits
                 result = subprocess.run(
                     ["git", "log", "--oneline", "-20", "--no-merges"],
                     capture_output=True,
-                    text=True
+                    text=True,
                 )
 
             if result.returncode == 0:
-                commits = result.stdout.strip().split('\n')
-                return f"Changes:\n" + '\n'.join(f"• {commit}" for commit in commits if commit)
+                commits = result.stdout.strip().split("\n")
+                return f"Changes:\n" + "\n".join(f"• {commit}" for commit in commits if commit)
         except:
             pass
 
@@ -675,6 +641,7 @@ command_registry.register(GitCherryPickCommand())
 command_registry.register(GitUndoCommand())
 command_registry.register(GitCleanCommand())
 command_registry.register(GitReleaseCommand())
+
 
 def register():
     """Register all remaining Git commands."""

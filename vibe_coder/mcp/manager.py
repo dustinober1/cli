@@ -11,8 +11,8 @@ from contextlib import AsyncExitStack
 from typing import Any, Dict, List, Optional
 
 from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
 from mcp.client.sse import sse_client
+from mcp.client.stdio import stdio_client
 from mcp.types import Tool
 
 from vibe_coder.config.manager import config_manager
@@ -141,7 +141,7 @@ class MCPManager:
                             "name": tool.name,
                             "description": tool.description,
                             "parameters": tool.inputSchema,
-                        }
+                        },
                     }
                     all_tools.append(tool_def)
             except Exception as e:

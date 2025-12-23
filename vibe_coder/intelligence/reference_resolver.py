@@ -8,7 +8,7 @@ multiple files in a repository.
 import ast
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
 from vibe_coder.intelligence.types import Definition, FileNode, SymbolReference
 
@@ -119,9 +119,7 @@ class ReferenceResolver:
                 if resolved_path:
                     self._import_map[import_path] = resolved_path
 
-    async def _resolve_import_path(
-        self, import_path: str, from_dir: str
-    ) -> Optional[str]:
+    async def _resolve_import_path(self, import_path: str, from_dir: str) -> Optional[str]:
         """Resolve an import path to an actual file path."""
         # Convert import path to potential file paths
         parts = import_path.split(".")
@@ -289,9 +287,7 @@ class ReferenceResolver:
 
         return None
 
-    async def get_dependencies(
-        self, file_path: str, include_indirect: bool = False
-    ) -> List[str]:
+    async def get_dependencies(self, file_path: str, include_indirect: bool = False) -> List[str]:
         """
         Get all files that this file depends on.
 
@@ -361,9 +357,7 @@ class ReferenceResolver:
             for ref in refs:
                 symbol_ref_counts[ref.name] = symbol_ref_counts.get(ref.name, 0) + 1
 
-        most_referenced = sorted(
-            symbol_ref_counts.items(), key=lambda x: x[1], reverse=True
-        )[:10]
+        most_referenced = sorted(symbol_ref_counts.items(), key=lambda x: x[1], reverse=True)[:10]
 
         return {
             "total_symbols": total_symbols,

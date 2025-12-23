@@ -1,16 +1,17 @@
 """Security scanner utility for vulnerability detection."""
 
-import re
 import os
+import re
 import subprocess
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 
 @dataclass
 class SecurityIssue:
     """Represents a security vulnerability."""
+
     severity: str  # critical, high, medium, low
     type: str  # sql_injection, xss, hardcoded_secret, etc.
     description: str
@@ -37,75 +38,75 @@ class SecurityScanner:
                     "languages": ["python"],
                     "severity": "high",
                     "description": "Potential SQL injection vulnerability",
-                    "recommendation": "Use parameterized queries or prepared statements"
+                    "recommendation": "Use parameterized queries or prepared statements",
                 },
                 {
                     "pattern": r'query\s*\(\s*["\'].*\+.*["\']',
                     "languages": ["python", "javascript"],
                     "severity": "high",
                     "description": "SQL query built with string concatenation",
-                    "recommendation": "Use parameterized queries"
+                    "recommendation": "Use parameterized queries",
                 },
                 {
-                    "pattern": r'\$\{.*\}',
+                    "pattern": r"\$\{.*\}",
                     "languages": ["javascript", "java"],
                     "severity": "medium",
                     "description": "Template literal injection risk",
-                    "recommendation": "Validate and sanitize inputs"
-                }
+                    "recommendation": "Validate and sanitize inputs",
+                },
             ],
             "command_injection": [
                 {
-                    "pattern": r'eval\s*\(',
+                    "pattern": r"eval\s*\(",
                     "languages": ["python", "javascript", "php"],
                     "severity": "critical",
                     "description": "Use of eval() function",
-                    "recommendation": "Avoid eval(). Use safer alternatives"
+                    "recommendation": "Avoid eval(). Use safer alternatives",
                 },
                 {
-                    "pattern": r'exec\s*\(',
+                    "pattern": r"exec\s*\(",
                     "languages": ["python"],
                     "severity": "critical",
                     "description": "Use of exec() function",
-                    "recommendation": "Avoid exec(). Use safer alternatives"
+                    "recommendation": "Avoid exec(). Use safer alternatives",
                 },
                 {
-                    "pattern": r'os\.system\s*\(',
+                    "pattern": r"os\.system\s*\(",
                     "languages": ["python"],
                     "severity": "high",
                     "description": "Direct command execution",
-                    "recommendation": "Use subprocess with proper sanitization"
+                    "recommendation": "Use subprocess with proper sanitization",
                 },
                 {
-                    "pattern": r'subprocess\.call\s*.*shell=True',
+                    "pattern": r"subprocess\.call\s*.*shell=True",
                     "languages": ["python"],
                     "severity": "high",
                     "description": "Shell injection risk with shell=True",
-                    "recommendation": "Avoid shell=True or sanitize input"
+                    "recommendation": "Avoid shell=True or sanitize input",
                 },
                 {
-                    "pattern": r'child_process\.exec\s*\(',
+                    "pattern": r"child_process\.exec\s*\(",
                     "languages": ["javascript"],
                     "severity": "high",
                     "description": "Command execution in Node.js",
-                    "recommendation": "Use execSync or spawn with proper sanitization"
-                }
+                    "recommendation": "Use execSync or spawn with proper sanitization",
+                },
             ],
             "path_traversal": [
                 {
-                    "pattern": r'\.\./',
+                    "pattern": r"\.\./",
                     "languages": ["python", "javascript", "java", "php"],
                     "severity": "medium",
                     "description": "Potential path traversal",
-                    "recommendation": "Validate and sanitize file paths"
+                    "recommendation": "Validate and sanitize file paths",
                 },
                 {
-                    "pattern": r'open\s*\(\s*.*\+.*',
+                    "pattern": r"open\s*\(\s*.*\+.*",
                     "languages": ["python"],
                     "severity": "medium",
                     "description": "File path constructed from variables",
-                    "recommendation": "Use os.path.join and validate paths"
-                }
+                    "recommendation": "Use os.path.join and validate paths",
+                },
             ],
             "hardcoded_secrets": [
                 {
@@ -113,84 +114,84 @@ class SecurityScanner:
                     "languages": ["python", "javascript", "java", "php"],
                     "severity": "high",
                     "description": "Hardcoded password",
-                    "recommendation": "Use environment variables or secure vault"
+                    "recommendation": "Use environment variables or secure vault",
                 },
                 {
                     "pattern": r'(secret|key)\s*[=:]\s*["\'][^"\']+["\']',
                     "languages": ["python", "javascript", "java", "php"],
                     "severity": "high",
                     "description": "Hardcoded secret or API key",
-                    "recommendation": "Use environment variables or secure vault"
+                    "recommendation": "Use environment variables or secure vault",
                 },
                 {
                     "pattern": r'(token|auth)\s*[=:]\s*["\'][^"\']+["\']',
                     "languages": ["python", "javascript", "java", "php"],
                     "severity": "medium",
                     "description": "Hardcoded authentication token",
-                    "recommendation": "Use environment variables or secure vault"
-                }
+                    "recommendation": "Use environment variables or secure vault",
+                },
             ],
             "insecure_crypto": [
                 {
-                    "pattern": r'md5\s*\(',
+                    "pattern": r"md5\s*\(",
                     "languages": ["python", "javascript", "php"],
                     "severity": "medium",
                     "description": "Use of MD5 hash algorithm",
-                    "recommendation": "Use SHA-256 or stronger hash algorithms"
+                    "recommendation": "Use SHA-256 or stronger hash algorithms",
                 },
                 {
-                    "pattern": r'sha1\s*\(',
+                    "pattern": r"sha1\s*\(",
                     "languages": ["python", "javascript", "php"],
                     "severity": "medium",
                     "description": "Use of SHA-1 hash algorithm",
-                    "recommendation": "Use SHA-256 or stronger hash algorithms"
+                    "recommendation": "Use SHA-256 or stronger hash algorithms",
                 },
                 {
-                    "pattern": r'random\s*\(',
+                    "pattern": r"random\s*\(",
                     "languages": ["python"],
                     "severity": "medium",
                     "description": "Use of insecure random number generator",
-                    "recommendation": "Use secrets module for cryptographic random"
-                }
+                    "recommendation": "Use secrets module for cryptographic random",
+                },
             ],
             "xss": [
                 {
-                    "pattern": r'innerHTML\s*=',
+                    "pattern": r"innerHTML\s*=",
                     "languages": ["javascript", "typescript"],
                     "severity": "high",
                     "description": "Potential XSS vulnerability with innerHTML",
-                    "recommendation": "Sanitize input before setting innerHTML"
+                    "recommendation": "Sanitize input before setting innerHTML",
                 },
                 {
-                    "pattern": r'document\.write\s*\(',
+                    "pattern": r"document\.write\s*\(",
                     "languages": ["javascript", "typescript"],
                     "severity": "high",
                     "description": "Potential XSS with document.write",
-                    "recommendation": "Avoid document.write, use safer DOM methods"
+                    "recommendation": "Avoid document.write, use safer DOM methods",
                 },
                 {
-                    "pattern": r'eval\s*\(',
+                    "pattern": r"eval\s*\(",
                     "languages": ["javascript", "typescript"],
                     "severity": "critical",
                     "description": "XSS risk with eval",
-                    "recommendation": "Avoid eval, use JSON.parse or alternatives"
-                }
+                    "recommendation": "Avoid eval, use JSON.parse or alternatives",
+                },
             ],
             "insecure_deserialization": [
                 {
-                    "pattern": r'pickle\.loads?\s*\(',
+                    "pattern": r"pickle\.loads?\s*\(",
                     "languages": ["python"],
                     "severity": "critical",
                     "description": "Insecure pickle deserialization",
-                    "recommendation": "Use safe serialization formats like JSON"
+                    "recommendation": "Use safe serialization formats like JSON",
                 },
                 {
-                    "pattern": r'yaml\.load\s*\(',
+                    "pattern": r"yaml\.load\s*\(",
                     "languages": ["python"],
                     "severity": "high",
                     "description": "Unsafe YAML loading",
-                    "recommendation": "Use yaml.safe_load instead"
-                }
+                    "recommendation": "Use yaml.safe_load instead",
+                },
             ],
             "weak_authentication": [
                 {
@@ -198,44 +199,32 @@ class SecurityScanner:
                     "languages": ["python", "javascript", "java", "php"],
                     "severity": "high",
                     "description": "Plain text password comparison",
-                    "recommendation": "Use proper password hashing (bcrypt, scrypt, argon2)"
+                    "recommendation": "Use proper password hashing (bcrypt, scrypt, argon2)",
                 }
-            ]
+            ],
         }
 
     def _load_secret_patterns(self) -> List[Dict[str, str]]:
         """Load patterns for detecting secrets."""
         return [
+            {"pattern": r"AIza[0-9A-Za-z_-]{35}", "type": "Google API Key", "severity": "critical"},
+            {"pattern": r"AKIA[0-9A-Z]{16}", "type": "AWS Access Key", "severity": "critical"},
             {
-                "pattern": r'AIza[0-9A-Za-z_-]{35}',
-                "type": "Google API Key",
-                "severity": "critical"
-            },
-            {
-                "pattern": r'AKIA[0-9A-Z]{16}',
-                "type": "AWS Access Key",
-                "severity": "critical"
-            },
-            {
-                "pattern": r'ghp_[a-zA-Z0-9]{36}',
+                "pattern": r"ghp_[a-zA-Z0-9]{36}",
                 "type": "GitHub Personal Access Token",
-                "severity": "critical"
+                "severity": "critical",
             },
             {
-                "pattern": r'glpat-[a-zA-Z0-9_-]{20}',
+                "pattern": r"glpat-[a-zA-Z0-9_-]{20}",
                 "type": "GitLab Personal Access Token",
-                "severity": "critical"
+                "severity": "critical",
             },
+            {"pattern": r"sk_[a-zA-Z0-9]{24,}", "type": "Stripe API Key", "severity": "critical"},
             {
-                "pattern": r'sk_[a-zA-Z0-9]{24,}',
-                "type": "Stripe API Key",
-                "severity": "critical"
-            },
-            {
-                "pattern": r'xox[baprs]-[0-9]{12}-[0-9]{12}-[0-9]{12}-[a-zA-Z0-9]{32}',
+                "pattern": r"xox[baprs]-[0-9]{12}-[0-9]{12}-[0-9]{12}-[a-zA-Z0-9]{32}",
                 "type": "Slack Token",
-                "severity": "critical"
-            }
+                "severity": "critical",
+            },
         ]
 
     def scan_file(self, file_path: str) -> List[SecurityIssue]:
@@ -243,9 +232,9 @@ class SecurityScanner:
         issues = []
 
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
-                lines = content.split('\n')
+                lines = content.split("\n")
 
             # Detect language
             language = self._detect_language(file_path)
@@ -254,7 +243,11 @@ class SecurityScanner:
             for vuln_type, patterns in self.patterns.items():
                 for pattern_info in patterns:
                     # Check if pattern applies to this language
-                    if language and pattern_info.get("languages") and language not in pattern_info["languages"]:
+                    if (
+                        language
+                        and pattern_info.get("languages")
+                        and language not in pattern_info["languages"]
+                    ):
                         continue
 
                     # Search for pattern
@@ -263,22 +256,23 @@ class SecurityScanner:
                             # Extract code snippet (context)
                             start_line = max(0, line_num - 2)
                             end_line = min(len(lines), line_num + 2)
-                            code_snippet = '\n'.join(lines[start_line:end_line])
+                            code_snippet = "\n".join(lines[start_line:end_line])
                             # Highlight the matching line
                             code_snippet = code_snippet.replace(
-                                lines[line_num - 1],
-                                f">>> {lines[line_num - 1]}"
+                                lines[line_num - 1], f">>> {lines[line_num - 1]}"
                             )
 
-                            issues.append(SecurityIssue(
-                                severity=pattern_info["severity"],
-                                type=vuln_type,
-                                description=pattern_info["description"],
-                                file_path=file_path,
-                                line_number=line_num,
-                                code_snippet=code_snippet,
-                                recommendation=pattern_info["recommendation"]
-                            ))
+                            issues.append(
+                                SecurityIssue(
+                                    severity=pattern_info["severity"],
+                                    type=vuln_type,
+                                    description=pattern_info["description"],
+                                    file_path=file_path,
+                                    line_number=line_num,
+                                    code_snippet=code_snippet,
+                                    recommendation=pattern_info["recommendation"],
+                                )
+                            )
 
             # Scan for hardcoded secrets
             for secret_pattern in self.secret_patterns:
@@ -288,37 +282,40 @@ class SecurityScanner:
                         masked_line = re.sub(
                             secret_pattern["pattern"],
                             lambda m: m.group(0)[:8] + "***" + m.group(0)[-4:],
-                            line
+                            line,
                         )
 
                         start_line = max(0, line_num - 1)
                         end_line = min(len(lines), line_num + 1)
-                        code_snippet = '\n'.join(lines[start_line:end_line])
+                        code_snippet = "\n".join(lines[start_line:end_line])
                         code_snippet = code_snippet.replace(
-                            lines[line_num - 1],
-                            f">>> {masked_line}"
+                            lines[line_num - 1], f">>> {masked_line}"
                         )
 
-                        issues.append(SecurityIssue(
-                            severity=secret_pattern["severity"],
-                            type="hardcoded_secret",
-                            description=f"Detected {secret_pattern['type']}",
-                            file_path=file_path,
-                            line_number=line_num,
-                            code_snippet=code_snippet,
-                            recommendation="Remove hardcoded secret and use environment variables or secret management"
-                        ))
+                        issues.append(
+                            SecurityIssue(
+                                severity=secret_pattern["severity"],
+                                type="hardcoded_secret",
+                                description=f"Detected {secret_pattern['type']}",
+                                file_path=file_path,
+                                line_number=line_num,
+                                code_snippet=code_snippet,
+                                recommendation="Remove hardcoded secret and use environment variables or secret management",
+                            )
+                        )
 
         except Exception as e:
-            issues.append(SecurityIssue(
-                severity="low",
-                type="scan_error",
-                description=f"Error scanning file: {str(e)}",
-                file_path=file_path,
-                line_number=0,
-                code_snippet="",
-                recommendation="Check file encoding and permissions"
-            ))
+            issues.append(
+                SecurityIssue(
+                    severity="low",
+                    type="scan_error",
+                    description=f"Error scanning file: {str(e)}",
+                    file_path=file_path,
+                    line_number=0,
+                    code_snippet="",
+                    recommendation="Check file encoding and permissions",
+                )
+            )
 
         return issues
 
@@ -329,17 +326,55 @@ class SecurityScanner:
 
         # Find code files
         code_extensions = [
-            '.py', '.js', '.ts', '.jsx', '.tsx', '.java', '.go', '.rb',
-            '.php', '.cs', '.cpp', '.c', '.h', '.hpp', '.rs', '.swift',
-            '.kt', '.scala', '.html', '.htm', '.css', '.scss', '.less',
-            '.xml', '.json', '.yaml', '.yml', '.sh', '.bash', '.zsh',
-            '.ps1', '.bat', '.cmd', '.sql', '.pl', '.r', '.m', '.vue',
-            '.svelte', '.astro', '.erb', '.ejs', '.hbs', '.mustache'
+            ".py",
+            ".js",
+            ".ts",
+            ".jsx",
+            ".tsx",
+            ".java",
+            ".go",
+            ".rb",
+            ".php",
+            ".cs",
+            ".cpp",
+            ".c",
+            ".h",
+            ".hpp",
+            ".rs",
+            ".swift",
+            ".kt",
+            ".scala",
+            ".html",
+            ".htm",
+            ".css",
+            ".scss",
+            ".less",
+            ".xml",
+            ".json",
+            ".yaml",
+            ".yml",
+            ".sh",
+            ".bash",
+            ".zsh",
+            ".ps1",
+            ".bat",
+            ".cmd",
+            ".sql",
+            ".pl",
+            ".r",
+            ".m",
+            ".vue",
+            ".svelte",
+            ".astro",
+            ".erb",
+            ".ejs",
+            ".hbs",
+            ".mustache",
         ]
 
         for root, dirs, files in os.walk(directory):
             # Skip hidden directories
-            dirs[:] = [d for d in dirs if not d.startswith('.')]
+            dirs[:] = [d for d in dirs if not d.startswith(".")]
 
             for file in files:
                 if scanned_files >= max_files:
@@ -359,12 +394,7 @@ class SecurityScanner:
     def generate_report(self, issues: List[SecurityIssue]) -> str:
         """Generate a security report from issues."""
         # Group issues by severity
-        by_severity = {
-            "critical": [],
-            "high": [],
-            "medium": [],
-            "low": []
-        }
+        by_severity = {"critical": [], "high": [], "medium": [], "low": []}
 
         for issue in issues:
             by_severity[issue.severity].append(issue)
@@ -398,7 +428,7 @@ class SecurityScanner:
 
                 if issue.code_snippet:
                     report.append("   📝 Code:")
-                    for line in issue.code_snippet.split('\n'):
+                    for line in issue.code_snippet.split("\n"):
                         if line.strip():
                             report.append(f"     {line}")
 
@@ -414,56 +444,56 @@ class SecurityScanner:
         report.append("  🔐 Use secret management for credentials")
         report.append("  🛡️  Enable security headers in web applications")
 
-        return '\n'.join(report)
+        return "\n".join(report)
 
     def _detect_language(self, file_path: str) -> Optional[str]:
         """Detect programming language from file extension."""
         ext = os.path.splitext(file_path)[1].lower()
         language_map = {
-            '.py': 'python',
-            '.js': 'javascript',
-            '.ts': 'typescript',
-            '.jsx': 'javascript',
-            '.tsx': 'typescript',
-            '.java': 'java',
-            '.go': 'go',
-            '.rb': 'ruby',
-            '.php': 'php',
-            '.cs': 'csharp',
-            '.cpp': 'cpp',
-            '.c': 'c',
-            '.h': 'c',
-            '.hpp': 'cpp',
-            '.rs': 'rust',
-            '.swift': 'swift',
-            '.kt': 'kotlin',
-            '.scala': 'scala',
-            '.html': 'html',
-            '.htm': 'html',
-            '.css': 'css',
-            '.scss': 'scss',
-            '.less': 'less',
-            '.xml': 'xml',
-            '.json': 'json',
-            '.yaml': 'yaml',
-            '.yml': 'yaml',
-            '.sh': 'shell',
-            '.bash': 'shell',
-            '.zsh': 'shell',
-            '.ps1': 'powershell',
-            '.bat': 'batch',
-            '.cmd': 'batch',
-            '.sql': 'sql',
-            '.pl': 'perl',
-            '.r': 'r',
-            '.m': 'objective-c',
-            '.vue': 'vue',
-            '.svelte': 'svelte',
-            '.astro': 'astro',
-            '.erb': 'ruby',
-            '.ejs': 'javascript',
-            '.hbs': 'javascript',
-            '.mustache': 'javascript'
+            ".py": "python",
+            ".js": "javascript",
+            ".ts": "typescript",
+            ".jsx": "javascript",
+            ".tsx": "typescript",
+            ".java": "java",
+            ".go": "go",
+            ".rb": "ruby",
+            ".php": "php",
+            ".cs": "csharp",
+            ".cpp": "cpp",
+            ".c": "c",
+            ".h": "c",
+            ".hpp": "cpp",
+            ".rs": "rust",
+            ".swift": "swift",
+            ".kt": "kotlin",
+            ".scala": "scala",
+            ".html": "html",
+            ".htm": "html",
+            ".css": "css",
+            ".scss": "scss",
+            ".less": "less",
+            ".xml": "xml",
+            ".json": "json",
+            ".yaml": "yaml",
+            ".yml": "yaml",
+            ".sh": "shell",
+            ".bash": "shell",
+            ".zsh": "shell",
+            ".ps1": "powershell",
+            ".bat": "batch",
+            ".cmd": "batch",
+            ".sql": "sql",
+            ".pl": "perl",
+            ".r": "r",
+            ".m": "objective-c",
+            ".vue": "vue",
+            ".svelte": "svelte",
+            ".astro": "astro",
+            ".erb": "ruby",
+            ".ejs": "javascript",
+            ".hbs": "javascript",
+            ".mustache": "javascript",
         }
         return language_map.get(ext)
 
@@ -476,14 +506,13 @@ class SecurityScanner:
             if any(Path(directory).rglob("*.py")):
                 try:
                     result = subprocess.run(
-                        ["bandit", "-r", directory, "-f", "json"],
-                        capture_output=True,
-                        text=True
+                        ["bandit", "-r", directory, "-f", "json"], capture_output=True, text=True
                     )
                     if result.returncode == 0 or result.returncode == 1:  # 1 means issues found
                         results["output"] = result.stdout
                         if result.stdout:
                             import json
+
                             bandit_results = json.loads(result.stdout)
                             results["issues"] = bandit_results.get("results", [])
                         results["tool"] = "bandit"
@@ -496,7 +525,7 @@ class SecurityScanner:
                 result = subprocess.run(
                     ["semgrep", "--config=auto", "--json", directory],
                     capture_output=True,
-                    text=True
+                    text=True,
                 )
                 if result.returncode == 0:
                     results["output"] = result.stdout
@@ -513,10 +542,7 @@ class SecurityScanner:
             if package_json.exists():
                 try:
                     result = subprocess.run(
-                        ["npm", "audit", "--json"],
-                        capture_output=True,
-                        text=True,
-                        cwd=directory
+                        ["npm", "audit", "--json"], capture_output=True, text=True, cwd=directory
                     )
                     if result.stdout:
                         results["output"] = result.stdout

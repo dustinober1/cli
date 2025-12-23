@@ -8,7 +8,7 @@ like recency, dependencies, entry points, and graph centrality.
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Set, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Optional, Set
 
 from vibe_coder.intelligence.types import FileImportance
 
@@ -21,9 +21,9 @@ class ImportanceScorer:
 
     # Scoring weights (should sum to 1.0)
     WEIGHTS = {
-        "recency": 0.20,        # Recently modified files
-        "dependencies": 0.25,   # Files with more dependents
-        "entry_points": 0.20,   # Main files, CLI entry points
+        "recency": 0.20,  # Recently modified files
+        "dependencies": 0.25,  # Files with more dependents
+        "entry_points": 0.20,  # Main files, CLI entry points
         "test_coverage": 0.10,  # Well-tested files
         "change_frequency": 0.15,  # Frequently changed files
         "graph_centrality": 0.10,  # Files in dependency chains
@@ -38,9 +38,7 @@ class ImportanceScorer:
         self._importance_cache: Dict[str, FileImportance] = {}
         self._git_history: Dict[str, List[datetime]] = {}
 
-    async def score_file(
-        self, file_path: str, context: Optional[Dict] = None
-    ) -> float:
+    async def score_file(self, file_path: str, context: Optional[Dict] = None) -> float:
         """
         Calculate importance score for a file.
 
@@ -190,8 +188,7 @@ class ImportanceScorer:
         ]
 
         has_test = any(
-            test_file in self.repo_mapper._repo_map.modules
-            for test_file in possible_test_files
+            test_file in self.repo_mapper._repo_map.modules for test_file in possible_test_files
         )
 
         return 1.0 if has_test else 0.2  # Small score even without tests
@@ -247,9 +244,7 @@ class ImportanceScorer:
             return min(1.0, connections / max_connections)
         return 0.0
 
-    def _apply_context_boost(
-        self, base_score: float, file_path: str, context: Dict
-    ) -> float:
+    def _apply_context_boost(self, base_score: float, file_path: str, context: Dict) -> float:
         """Apply score adjustments based on context."""
         boosted_score = base_score
 
@@ -317,9 +312,7 @@ class ImportanceScorer:
         """Clear the importance score cache."""
         self._importance_cache.clear()
 
-    async def get_top_files(
-        self, limit: int = 10, context: Optional[Dict] = None
-    ) -> List[tuple]:
+    async def get_top_files(self, limit: int = 10, context: Optional[Dict] = None) -> List[tuple]:
         """
         Get the top N most important files in the repository.
 

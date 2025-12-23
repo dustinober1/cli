@@ -1,11 +1,12 @@
 """Tests for the TemplateEngine class."""
 
-import pytest
-from unittest.mock import patch, mock_open, MagicMock
-import tempfile
 import json
 import os
+import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock, mock_open, patch
+
+import pytest
 
 from vibe_coder.utils.template_engine import TemplateEngine, TemplateInfo
 
@@ -13,8 +14,8 @@ from vibe_coder.utils.template_engine import TemplateEngine, TemplateInfo
 class TestTemplateEngineInitialization:
     """Test TemplateEngine initialization."""
 
-    @patch('pathlib.Path.mkdir')
-    @patch('pathlib.Path.exists')
+    @patch("pathlib.Path.mkdir")
+    @patch("pathlib.Path.exists")
     def test_init_default_dir(self, mock_exists, mock_mkdir):
         """Test initialization with default directory."""
         mock_exists.return_value = False
@@ -24,7 +25,7 @@ class TestTemplateEngineInitialization:
         assert str(engine.template_dir).endswith(".vibe/templates")
         mock_mkdir.assert_called_with(parents=True, exist_ok=True)
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_init_custom_dir(self, mock_mkdir):
         """Test initialization with custom directory."""
         custom_dir = "/custom/templates"
@@ -37,7 +38,7 @@ class TestTemplateEngineInitialization:
 class TestLoadTemplates:
     """Test template loading."""
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_load_builtin_templates(self, mock_mkdir):
         """Test loading built-in templates."""
         engine = TemplateEngine()
@@ -50,17 +51,21 @@ class TestLoadTemplates:
         assert "api_endpoint" in engine.templates
         assert "sql_table" in engine.templates
 
-    @patch('pathlib.Path.mkdir')
-    @patch('pathlib.Path.exists')
-    @patch('pathlib.Path.rglob')
-    @patch('builtins.open', new_callable=mock_open, read_data='''# Name: Custom Template
+    @patch("pathlib.Path.mkdir")
+    @patch("pathlib.Path.exists")
+    @patch("pathlib.Path.rglob")
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data="""# Name: Custom Template
 # Description: A custom template
 # Category: custom
 # Language: python
 
 def ${function_name}():
     ${body}
-''')
+""",
+    )
     def test_load_user_templates(self, mock_exists, mock_rglob, mock_mkdir, mock_file):
         """Test loading user templates."""
         mock_exists.return_value = True
@@ -80,10 +85,10 @@ def ${function_name}():
         assert "function_name" in custom.variables
         assert "body" in custom.variables
 
-    @patch('pathlib.Path.mkdir')
-    @patch('pathlib.Path.exists')
-    @patch('pathlib.Path.rglob')
-    @patch('builtins.open', side_effect=OSError("Permission denied"))
+    @patch("pathlib.Path.mkdir")
+    @patch("pathlib.Path.exists")
+    @patch("pathlib.Path.rglob")
+    @patch("builtins.open", side_effect=OSError("Permission denied"))
     def test_load_user_templates_error(self, mock_open, mock_rglob, mock_exists, mock_mkdir):
         """Test handling errors when loading user templates."""
         mock_exists.return_value = True
@@ -100,7 +105,10 @@ def ${function_name}():
 class TestParseTemplateFile:
     """Test template file parsing."""
 
-    @patch('builtins.open', new_callable=mock_open, read_data='''# Name: Test Template
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data='''# Name: Test Template
 # Description: A test template
 # Category: test
 # Language: python
@@ -109,7 +117,8 @@ class TestParseTemplateFile:
 def ${function_name}(${params}):
     """${docstring}"""
     return ${return_value}
-''')
+''',
+    )
     def test_parse_template_file_with_metadata(self, mock_file):
         """Test parsing template file with metadata."""
         engine = TemplateEngine()
@@ -128,9 +137,13 @@ def ${function_name}(${params}):
         assert "return_value" in result.variables
         assert str(file_path) == result.file_path
 
-    @patch('builtins.open', new_callable=mock_open, read_data='''def ${function_name}():
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data="""def ${function_name}():
     return "Hello, ${name}!"
-''')
+""",
+    )
     def test_parse_template_file_no_metadata(self, mock_file):
         """Test parsing template file without metadata."""
         engine = TemplateEngine()
@@ -146,7 +159,7 @@ def ${function_name}(${params}):
         assert "function_name" in result.variables
         assert "name" in result.variables
 
-    @patch('builtins.open', side_effect=OSError("Permission denied"))
+    @patch("builtins.open", side_effect=OSError("Permission denied"))
     def test_parse_template_file_error(self, mock_open):
         """Test handling errors when parsing template file."""
         engine = TemplateEngine()
@@ -172,17 +185,24 @@ def ${function_name}(${param1}, ${param2}):
 '''
         variables = engine._extract_variables(template)
 
-        expected = {"function_name", "param1", "param2", "docstring", "variable_name", "default_value"}
+        expected = {
+            "function_name",
+            "param1",
+            "param2",
+            "docstring",
+            "variable_name",
+            "default_value",
+        }
         assert set(variables) == expected
 
     def test_extract_variables_no_duplicates(self):
         """Test that duplicate variables are not included."""
         engine = TemplateEngine()
 
-        template = '''
+        template = """
 ${name} = "${name}"
 print(${name})
-'''
+"""
         variables = engine._extract_variables(template)
 
         assert variables == ["name"]
@@ -191,10 +211,10 @@ print(${name})
         """Test extracting variables from template with no variables."""
         engine = TemplateEngine()
 
-        template = '''
+        template = """
 def function():
     return "Hello, World!"
-'''
+"""
         variables = engine._extract_variables(template)
 
         assert variables == []
@@ -203,9 +223,9 @@ def function():
         """Test extracting variables with nested braces."""
         engine = TemplateEngine()
 
-        template = '''
+        template = """
 console.log("${prefix}: ${message}");
-'''
+"""
         variables = engine._extract_variables(template)
 
         assert set(variables) == {"prefix", "message"}
@@ -215,53 +235,60 @@ console.log("${prefix}: ${message}");
         engine = TemplateEngine()
 
         # Incomplete patterns
-        template1 = '${variable'
+        template1 = "${variable"
         assert engine._extract_variables(template1) == []
 
         # Empty variable name
-        template2 = '${}'
+        template2 = "${}"
         assert engine._extract_variables(template2) == []
 
         # Multiple braces
-        template3 = '${var${nested}}'
+        template3 = "${var${nested}}"
         # regex will match 'var${nested' as one variable name
         result = engine._extract_variables(template3)
-        assert 'var${nested' in result
+        assert "var${nested" in result
 
 
 class TestRenderTemplate:
     """Test template rendering."""
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_render_builtin_template(self, mock_mkdir):
         """Test rendering built-in template."""
         engine = TemplateEngine()
 
-        result = engine.render_template("python_function", {
-            "function_name": "greet",
-            "params": "name: str",
-            "return_type": "str",
-            "docstring": "Greet someone by name",
-            "args_doc": "name: The name to greet",
-            "return_description": "A greeting message",
-            "function_body": 'return f"Hello, {name}!"'
-        })
+        result = engine.render_template(
+            "python_function",
+            {
+                "function_name": "greet",
+                "params": "name: str",
+                "return_type": "str",
+                "docstring": "Greet someone by name",
+                "args_doc": "name: The name to greet",
+                "return_description": "A greeting message",
+                "function_body": 'return f"Hello, {name}!"',
+            },
+        )
 
         assert "def greet(name: str) -> str:" in result
         assert "Greet someone by name" in result
         assert 'return f"Hello, {name}!"' in result
 
-    @patch('pathlib.Path.mkdir')
-    @patch('pathlib.Path.exists')
-    @patch('pathlib.Path.rglob')
-    @patch('builtins.open', new_callable=mock_open, read_data='''# Name: Custom
+    @patch("pathlib.Path.mkdir")
+    @patch("pathlib.Path.exists")
+    @patch("pathlib.Path.rglob")
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data="""# Name: Custom
 # Description: Custom template
 # Category: custom
 # Language: python
 
 def ${func}():
     return ${value}
-''')
+""",
+    )
     def test_render_user_template(self, mock_file, mock_rglob, mock_exists, mock_mkdir):
         """Test rendering user template."""
         mock_exists.return_value = True
@@ -272,15 +299,12 @@ def ${func}():
 
         engine = TemplateEngine()
 
-        result = engine.render_template("custom", {
-            "func": "test",
-            "value": "42"
-        })
+        result = engine.render_template("custom", {"func": "test", "value": "42"})
 
         assert "def test():" in result
         assert "return 42" in result
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_render_template_not_found(self, mock_mkdir):
         """Test rendering non-existent template."""
         engine = TemplateEngine()
@@ -288,51 +312,60 @@ def ${func}():
         with pytest.raises(ValueError, match="Template 'nonexistent' not found"):
             engine.render_template("nonexistent", {})
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_render_template_missing_variable(self, mock_mkdir):
         """Test rendering template with missing variable."""
         engine = TemplateEngine()
 
         with pytest.raises(ValueError, match="Missing required variable"):
-            engine.render_template("python_function", {
-                "function_name": "test"
-                # Missing other required variables
-            })
+            engine.render_template(
+                "python_function",
+                {
+                    "function_name": "test"
+                    # Missing other required variables
+                },
+            )
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_render_template_partial_substitution(self, mock_mkdir):
         """Test template with partial variable substitution."""
         engine = TemplateEngine()
 
-        result = engine.render_template("python_function", {
-            "function_name": "test",
-            "params": "",
-            "return_type": "None",
-            "docstring": "Test function",
-            "args_doc": "",
-            "return_description": "",
-            "function_body": "pass",
-            "other_var": "This will not be used"
-        })
+        result = engine.render_template(
+            "python_function",
+            {
+                "function_name": "test",
+                "params": "",
+                "return_type": "None",
+                "docstring": "Test function",
+                "args_doc": "",
+                "return_description": "",
+                "function_body": "pass",
+                "other_var": "This will not be used",
+            },
+        )
 
         # Should substitute known variables, leave unknown as-is
         assert "def test() -> None:" in result
         assert "${other_var}" not in result
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_render_template_special_chars(self, mock_mkdir):
         """Test rendering template with special characters in variables."""
         engine = TemplateEngine()
 
-        result = engine.render_template("python_function", {
-            "function_name": "test",
-            "params": 'name: str = "World"',
-            "return_type": "str",
-            "docstring": "Test with 'quotes' and \\${} syntax",
-            "args_doc": "",
-            "return_description": "",
-            "function_body": 'return f"Hello, {name}"'
-        })
+        result = engine.render_template(
+            "python_function",
+            {
+                "function_name": "test",
+                "params": 'name: str = "World"',
+                "return_type": "str",
+                "docstring": "Test with 'quotes' and \\${} syntax",
+                "args_doc": "",
+                "return_description": "",
+                "function_body": 'return f"Hello, {name}"',
+            },
+        )
 
         assert 'name: str = "World"' in result
         assert "Test with 'quotes'" in result
@@ -341,7 +374,7 @@ def ${func}():
 class TestListTemplates:
     """Test template listing."""
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_list_templates_all(self, mock_mkdir):
         """Test listing all templates."""
         engine = TemplateEngine()
@@ -354,7 +387,7 @@ class TestListTemplates:
         assert "js_function" in template_names
         assert "html_page" in template_names
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_list_templates_by_category(self, mock_mkdir):
         """Test listing templates by category."""
         engine = TemplateEngine()
@@ -373,7 +406,7 @@ class TestListTemplates:
         assert "python_class" in python_names
         assert "python_function" in python_names
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_list_templates_by_language(self, mock_mkdir):
         """Test listing templates by language."""
         engine = TemplateEngine()
@@ -387,7 +420,7 @@ class TestListTemplates:
         assert all(t.language == "javascript" for t in javascript_templates)
         assert all(t.language == "html" for t in html_templates)
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_list_templates_combined_filters(self, mock_mkdir):
         """Test listing templates with multiple filters."""
         engine = TemplateEngine()
@@ -397,7 +430,7 @@ class TestListTemplates:
         # Should only include templates that match both
         assert all(t.category == "python" and t.language == "python" for t in templates)
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_list_templates_sorted(self, mock_mkdir):
         """Test that templates are sorted by name."""
         engine = TemplateEngine()
@@ -408,7 +441,7 @@ class TestListTemplates:
         names = [t.name for t in templates]
         assert names == sorted(names)
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_list_templates_no_matches(self, mock_mkdir):
         """Test listing with no matching templates."""
         engine = TemplateEngine()
@@ -421,9 +454,9 @@ class TestListTemplates:
 class TestCreateTemplate:
     """Test template creation."""
 
-    @patch('pathlib.Path.mkdir')
-    @patch('builtins.open', new_callable=mock_open)
-    @patch('pathlib.Path.__str__', return_value="/path/to/template")
+    @patch("pathlib.Path.mkdir")
+    @patch("builtins.open", new_callable=mock_open)
+    @patch("pathlib.Path.__str__", return_value="/path/to/template")
     def test_create_template(self, mock_str, mock_file, mock_mkdir):
         """Test creating a new template."""
         engine = TemplateEngine()
@@ -435,7 +468,7 @@ class TestCreateTemplate:
             content=content,
             description="Custom function template",
             category="custom",
-            language="python"
+            language="python",
         )
 
         assert "custom_function" in result
@@ -451,9 +484,9 @@ class TestCreateTemplate:
         assert "name" in template.variables
         assert "message" in template.variables
 
-    @patch('pathlib.Path.mkdir')
-    @patch('builtins.open', new_callable=mock_open)
-    @patch('pathlib.Path.__str__', return_value="/path/to/template")
+    @patch("pathlib.Path.mkdir")
+    @patch("builtins.open", new_callable=mock_open)
+    @patch("pathlib.Path.__str__", return_value="/path/to/template")
     def test_create_template_overwrite(self, mock_str, mock_file, mock_mkdir):
         """Test overwriting existing template."""
         engine = TemplateEngine()
@@ -461,11 +494,7 @@ class TestCreateTemplate:
 
         # Create initial template
         engine.create_template(
-            name="test",
-            content="initial",
-            description="Initial",
-            category="old",
-            language="python"
+            name="test", content="initial", description="Initial", category="old", language="python"
         )
 
         # Overwrite it
@@ -474,7 +503,7 @@ class TestCreateTemplate:
             content="updated",
             description="Updated",
             category="new",
-            language="javascript"
+            language="javascript",
         )
 
         assert "test" in result
@@ -486,20 +515,20 @@ class TestCreateTemplate:
         assert template.language == "javascript"
         assert template.content == "updated"
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_create_template_extracts_variables(self, mock_mkdir):
         """Test that create template extracts variables."""
         engine = TemplateEngine()
         engine.template_dir = Path("/tmp")
 
-        with patch('builtins.open', mock_open()):
-            with patch('pathlib.Path.__str__', return_value="/tmp/test.template"):
+        with patch("builtins.open", mock_open()):
+            with patch("pathlib.Path.__str__", return_value="/tmp/test.template"):
                 engine.create_template(
                     name="test",
                     content="function ${func}(${param1}, ${param2}) { return ${param1} + ${param2}; }",
                     description="Test",
                     category="test",
-                    language="javascript"
+                    language="javascript",
                 )
 
         template = engine.templates["test"]
@@ -510,9 +539,9 @@ class TestCreateTemplate:
 class TestDeleteTemplate:
     """Test template deletion."""
 
-    @patch('pathlib.Path.mkdir')
-    @patch('pathlib.Path.unlink')
-    @patch('pathlib.Path.exists')
+    @patch("pathlib.Path.mkdir")
+    @patch("pathlib.Path.unlink")
+    @patch("pathlib.Path.exists")
     def test_delete_user_template(self, mock_exists, mock_unlink, mock_mkdir):
         """Test deleting user template."""
         engine = TemplateEngine()
@@ -524,7 +553,7 @@ class TestDeleteTemplate:
             category="test",
             language="python",
             variables=[],
-            file_path="/path/to/test.template"
+            file_path="/path/to/test.template",
         )
         template_info.content = "test content"
         engine.templates["test_template"] = template_info
@@ -538,7 +567,7 @@ class TestDeleteTemplate:
         mock_unlink.assert_called_once()
         assert "test_template" not in engine.templates
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_delete_builtin_template(self, mock_mkdir):
         """Test deleting built-in template."""
         engine = TemplateEngine()
@@ -551,7 +580,7 @@ class TestDeleteTemplate:
         # Built-in template should be removed from memory
         assert "python_class" not in engine.templates
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_delete_nonexistent_template(self, mock_mkdir):
         """Test deleting non-existent template."""
         engine = TemplateEngine()
@@ -561,9 +590,9 @@ class TestDeleteTemplate:
         assert "nonexistent" in result
         assert "not found" in result
 
-    @patch('pathlib.Path.mkdir')
-    @patch('pathlib.Path.unlink')
-    @patch('pathlib.Path.exists')
+    @patch("pathlib.Path.mkdir")
+    @patch("pathlib.Path.unlink")
+    @patch("pathlib.Path.exists")
     def test_delete_template_no_file(self, mock_exists, mock_unlink, mock_mkdir):
         """Test deleting template with no associated file."""
         engine = TemplateEngine()
@@ -575,7 +604,7 @@ class TestDeleteTemplate:
             category="test",
             language="python",
             variables=[],
-            file_path=""
+            file_path="",
         )
         engine.templates["test"] = template_info
 
@@ -592,7 +621,7 @@ class TestDeleteTemplate:
 class TestGetTemplateInfo:
     """Test getting template information."""
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_get_template_info_exists(self, mock_mkdir):
         """Test getting info for existing template."""
         engine = TemplateEngine()
@@ -604,7 +633,7 @@ class TestGetTemplateInfo:
         assert info.category == "python"
         assert info.language == "python"
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_get_template_info_not_exists(self, mock_mkdir):
         """Test getting info for non-existent template."""
         engine = TemplateEngine()
@@ -617,9 +646,9 @@ class TestGetTemplateInfo:
 class TestExportImportTemplate:
     """Test template export and import."""
 
-    @patch('pathlib.Path.mkdir')
-    @patch('builtins.open', new_callable=mock_open)
-    @patch('json.dump')
+    @patch("pathlib.Path.mkdir")
+    @patch("builtins.open", new_callable=mock_open)
+    @patch("json.dump")
     def test_export_template(self, mock_json_dump, mock_file, mock_mkdir):
         """Test exporting template."""
         engine = TemplateEngine()
@@ -639,7 +668,7 @@ class TestExportImportTemplate:
         assert "content" in export_data
         assert "variables" in export_data
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_export_nonexistent_template(self, mock_mkdir):
         """Test exporting non-existent template."""
         engine = TemplateEngine()
@@ -649,10 +678,10 @@ class TestExportImportTemplate:
         assert "nonexistent" in result
         assert "not found" in result
 
-    @patch('pathlib.Path.mkdir')
-    @patch('builtins.open', new_callable=mock_open)
-    @patch('json.load')
-    @patch('json.dump')
+    @patch("pathlib.Path.mkdir")
+    @patch("builtins.open", new_callable=mock_open)
+    @patch("json.load")
+    @patch("json.dump")
     def test_import_template(self, mock_json_dump, mock_json_load, mock_file, mock_mkdir):
         """Test importing template."""
         engine = TemplateEngine()
@@ -663,11 +692,11 @@ class TestExportImportTemplate:
             "description": "An imported template",
             "category": "imported",
             "language": "javascript",
-            "content": "function ${name}() { return ${value}; }"
+            "content": "function ${name}() { return ${value}; }",
         }
         mock_json_load.return_value = import_data
 
-        with patch('pathlib.Path.__str__', return_value="/tmp/imported_template.template"):
+        with patch("pathlib.Path.__str__", return_value="/tmp/imported_template.template"):
             result = engine.import_template("/path/to/import.json")
 
         assert "imported_template" in result
@@ -679,13 +708,13 @@ class TestExportImportTemplate:
         assert template.category == "imported"
         assert template.language == "javascript"
 
-    @patch('pathlib.Path.mkdir')
-    @patch('builtins.open')
+    @patch("pathlib.Path.mkdir")
+    @patch("builtins.open")
     def test_import_template_missing_fields(self, mock_open, mock_mkdir):
         """Test importing template with missing required fields."""
         engine = TemplateEngine()
 
-        with patch('json.load') as mock_json_load:
+        with patch("json.load") as mock_json_load:
             mock_json_load.return_value = {
                 "name": "incomplete",
                 # Missing "content" field
@@ -695,13 +724,13 @@ class TestExportImportTemplate:
 
             assert "Missing required field: content" in result
 
-    @patch('pathlib.Path.mkdir')
-    @patch('builtins.open')
+    @patch("pathlib.Path.mkdir")
+    @patch("builtins.open")
     def test_import_template_invalid_json(self, mock_open, mock_mkdir):
         """Test importing template with invalid JSON."""
         engine = TemplateEngine()
 
-        with patch('json.load', side_effect=json.JSONDecodeError("", "", 0)):
+        with patch("json.load", side_effect=json.JSONDecodeError("", "", 0)):
             result = engine.import_template("/path/to/file.json")
 
             assert "Error importing template" in result
@@ -710,16 +739,12 @@ class TestExportImportTemplate:
 class TestGenerateFromSchema:
     """Test generating code from schema."""
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_generate_from_simple_schema(self, mock_mkdir):
         """Test generating code from simple schema."""
         engine = TemplateEngine()
 
-        schema = {
-            "name": "User",
-            "fields": ["id", "email", "password"],
-            "table": "users"
-        }
+        schema = {"name": "User", "fields": ["id", "email", "password"], "table": "users"}
 
         result = engine.generate_from_schema(schema, "sql_table")
 
@@ -727,7 +752,7 @@ class TestGenerateFromSchema:
         # Schema values should be available as variables
         # (This is a basic test - actual implementation would be more sophisticated)
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_generate_from_nested_schema(self, mock_mkdir):
         """Test generating code from nested schema."""
         engine = TemplateEngine()
@@ -737,8 +762,8 @@ class TestGenerateFromSchema:
                 "version": "v1",
                 "endpoints": [
                     {"path": "/users", "method": "GET"},
-                    {"path": "/users", "method": "POST"}
-                ]
+                    {"path": "/users", "method": "POST"},
+                ],
             }
         }
 
@@ -746,16 +771,13 @@ class TestGenerateFromSchema:
 
         assert result is not None
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_generate_from_schema_list_items(self, mock_mkdir):
         """Test generating code from schema with list items."""
         engine = TemplateEngine()
 
         schema = {
-            "columns": [
-                {"name": "id", "type": "integer"},
-                {"name": "name", "type": "string"}
-            ]
+            "columns": [{"name": "id", "type": "integer"}, {"name": "name", "type": "string"}]
         }
 
         result = engine.generate_from_schema(schema, "sql_table")
@@ -766,7 +788,7 @@ class TestGenerateFromSchema:
 class TestBuiltinTemplates:
     """Test built-in template content."""
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_builtin_python_class_template(self, mock_mkdir):
         """Test Python class built-in template."""
         engine = TemplateEngine()
@@ -777,7 +799,7 @@ class TestBuiltinTemplates:
         assert "def __init__" in result
         assert "${methods}" in result
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_builtin_python_function_template(self, mock_mkdir):
         """Test Python function built-in template."""
         engine = TemplateEngine()
@@ -788,7 +810,7 @@ class TestBuiltinTemplates:
         assert "-> ${return_type}:" in result
         assert "${docstring}" in result
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_builtin_js_function_template(self, mock_mkdir):
         """Test JavaScript function built-in template."""
         engine = TemplateEngine()
@@ -799,7 +821,7 @@ class TestBuiltinTemplates:
         assert "/**" in result
         assert "@returns" in result
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_builtin_html_template(self, mock_mkdir):
         """Test HTML page built-in template."""
         engine = TemplateEngine()
@@ -811,7 +833,7 @@ class TestBuiltinTemplates:
         assert "<body>" in result
         assert "${body_content}" in result
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_builtin_react_template(self, mock_mkdir):
         """Test React component built-in template."""
         engine = TemplateEngine()
@@ -822,7 +844,7 @@ class TestBuiltinTemplates:
         assert "const ${component_name}" in result
         assert "export default ${component_name};" in result
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_builtin_api_endpoint_template(self, mock_mkdir):
         """Test API endpoint built-in template."""
         engine = TemplateEngine()
@@ -833,7 +855,7 @@ class TestBuiltinTemplates:
         assert "async def ${endpoint_name}" in result
         assert "db: Session = Depends(get_db)" in result
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_builtin_unknown_template(self, mock_mkdir):
         """Test getting unknown built-in template."""
         engine = TemplateEngine()
@@ -846,20 +868,22 @@ class TestBuiltinTemplates:
 class TestEdgeCases:
     """Test edge cases and error conditions."""
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_template_name_conflict_builtin_user(self, mock_mkdir):
         """Test when user template conflicts with built-in."""
         engine = TemplateEngine()
 
         # Create user template with same name as built-in
-        with patch('builtins.open', mock_open()), \
-             patch('pathlib.Path.__str__', return_value="/tmp/python_function.template"):
+        with (
+            patch("builtins.open", mock_open()),
+            patch("pathlib.Path.__str__", return_value="/tmp/python_function.template"),
+        ):
             engine.create_template(
                 name="python_function",
                 content="custom content",
                 description="Custom version",
                 category="custom",
-                language="python"
+                language="python",
             )
 
         # User template should override built-in
@@ -867,28 +891,31 @@ class TestEdgeCases:
         assert template.description == "Custom version"
         assert template.content == "custom content"
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_render_with_invalid_variable_names(self, mock_mkdir):
         """Test rendering with variable names that might cause issues."""
         engine = TemplateEngine()
 
         # Template should handle any variable names
-        result = engine.render_template("python_function", {
-            "function_name": "test",
-            "params": "",
-            "return_type": "None",
-            "docstring": "Test",
-            "args_doc": "",
-            "return_description": "",
-            "function_body": "pass",
-            # Variables with special characters
-            "special_var": "value",
-            "var-with-dash": "value",  # This won't work in Python dict keys
-        })
+        result = engine.render_template(
+            "python_function",
+            {
+                "function_name": "test",
+                "params": "",
+                "return_type": "None",
+                "docstring": "Test",
+                "args_doc": "",
+                "return_description": "",
+                "function_body": "pass",
+                # Variables with special characters
+                "special_var": "value",
+                "var-with-dash": "value",  # This won't work in Python dict keys
+            },
+        )
 
         assert "def test() -> None:" in result
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_extract_variables_malformed_template(self, mock_mkdir):
         """Test extracting variables from malformed template."""
         engine = TemplateEngine()
@@ -901,20 +928,23 @@ class TestEdgeCases:
         assert "var1" in variables
         assert "var2" in variables
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_template_with_unicode(self, mock_mkdir):
         """Test handling unicode in templates."""
         engine = TemplateEngine()
 
-        result = engine.render_template("python_function", {
-            "function_name": "greet",
-            "params": "name: str",
-            "return_type": "str",
-            "docstring": "问候世界! 🌍",
-            "args_doc": "",
-            "return_description": "",
-            "function_body": 'return f"你好, {name}!"'
-        })
+        result = engine.render_template(
+            "python_function",
+            {
+                "function_name": "greet",
+                "params": "name: str",
+                "return_type": "str",
+                "docstring": "问候世界! 🌍",
+                "args_doc": "",
+                "return_description": "",
+                "function_body": 'return f"你好, {name}!"',
+            },
+        )
 
         assert "def greet(name: str) -> str:" in result
         assert "问候世界" in result

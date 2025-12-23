@@ -8,7 +8,7 @@ extracted via AST analysis.
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional, Set, Any
+from typing import Any, Dict, List, Optional, Set
 
 
 @dataclass
@@ -315,6 +315,7 @@ class Definition:
 
 class FileEventType(Enum):
     """File system event types."""
+
     CREATED = "created"
     MODIFIED = "modified"
     DELETED = "deleted"
@@ -437,5 +438,7 @@ class FileImportance:
             file_path=data["file_path"],
             score=data["score"],
             factors=data.get("factors", {}),
-            last_calculated=datetime.fromisoformat(data.get("last_calculated", datetime.now().isoformat())),
+            last_calculated=datetime.fromisoformat(
+                data.get("last_calculated", datetime.now().isoformat())
+            ),
         )

@@ -71,18 +71,25 @@ Code:
 
 Generate appropriate {"OpenAPI/Swagger" if "api" in filename.lower() or "route" in content.lower() else ""} documentation."""
 
-            response = await context.provider.client.send_request([
-                {"role": "system", "content": f"You are a technical writer who creates clear, comprehensive documentation. Generate documentation in {format_type} format.",
-                 "name": "DocumentationGenerator"},
-                {"role": "user", "content": prompt}
-            ])
+            response = await context.provider.client.send_request(
+                [
+                    {
+                        "role": "system",
+                        "content": f"You are a technical writer who creates clear, comprehensive documentation. Generate documentation in {format_type} format.",
+                        "name": "DocumentationGenerator",
+                    },
+                    {"role": "user", "content": prompt},
+                ]
+            )
 
             docs_content = response.content.strip()
 
             # Save documentation if output file specified
             if output_file:
                 await file_ops.write_file(output_file, docs_content)
-                return f"📄 Documentation saved to {output_file}\n\nPreview:\n{docs_content[:500]}..."
+                return (
+                    f"📄 Documentation saved to {output_file}\n\nPreview:\n{docs_content[:500]}..."
+                )
 
             return f"""📖 Documentation for {filename}
 
@@ -146,17 +153,30 @@ Examples:
         target_path = Path(target)
 
         try:
-            if target_path.exists() and target_path.suffix in ['.py', '.js', '.ts']:
+            if target_path.exists() and target_path.suffix in [".py", ".js", ".ts"]:
                 # Generate OpenAPI from code
-                return await self._generate_openapi_from_code(context, target, file_ops, format_type, server_url, api_title, api_version)
+                return await self._generate_openapi_from_code(
+                    context, target, file_ops, format_type, server_url, api_title, api_version
+                )
             else:
                 # Generate documentation from existing spec
-                return await self._enhance_openapi_spec(context, target, file_ops, format_type, server_url, api_title, api_version)
+                return await self._enhance_openapi_spec(
+                    context, target, file_ops, format_type, server_url, api_title, api_version
+                )
 
         except Exception as e:
             return f"Error generating API docs: {e}"
 
-    async def _generate_openapi_from_code(self, context: CommandContext, filename: str, file_ops: FileOperations, format_type: str, server_url: str, api_title: str, api_version: str) -> str:
+    async def _generate_openapi_from_code(
+        self,
+        context: CommandContext,
+        filename: str,
+        file_ops: FileOperations,
+        format_type: str,
+        server_url: str,
+        api_title: str,
+        api_version: str,
+    ) -> str:
         """Generate OpenAPI spec from code."""
         content = await file_ops.read_file(filename)
         language = file_ops.detect_language(filename)
@@ -180,11 +200,16 @@ Code:
 
 Generate a complete OpenAPI {format_type.upper()} specification."""
 
-        response = await context.provider.client.send_request([
-            {"role": "system", "content": "You are an API documentation expert. Generate accurate OpenAPI specifications from code.",
-                 "name": "OpenAPIGenerator"},
-            {"role": "user", "content": prompt}
-        ])
+        response = await context.provider.client.send_request(
+            [
+                {
+                    "role": "system",
+                    "content": "You are an API documentation expert. Generate accurate OpenAPI specifications from code.",
+                    "name": "OpenAPIGenerator",
+                },
+                {"role": "user", "content": prompt},
+            ]
+        )
 
         spec_content = response.content.strip()
 
@@ -199,7 +224,16 @@ Generate a complete OpenAPI {format_type.upper()} specification."""
 Preview:
 {spec_content[:500]}..."""
 
-    async def _enhance_openapi_spec(self, context: CommandContext, spec_file: str, file_ops: FileOperations, format_type: str, server_url: str, api_title: str, api_version: str) -> str:
+    async def _enhance_openapi_spec(
+        self,
+        context: CommandContext,
+        spec_file: str,
+        file_ops: FileOperations,
+        format_type: str,
+        server_url: str,
+        api_title: str,
+        api_version: str,
+    ) -> str:
         """Enhance existing OpenAPI spec."""
         content = await file_ops.read_file(spec_file)
 
@@ -218,11 +252,16 @@ Requirements:
 Current spec:
 {content}"""
 
-        response = await context.provider.client.send_request([
-            {"role": "system", "content": "You are an OpenAPI expert. Enhance specifications with missing details and best practices.",
-                 "name": "OpenAPIEnhancer"},
-            {"role": "user", "content": prompt}
-        ])
+        response = await context.provider.client.send_request(
+            [
+                {
+                    "role": "system",
+                    "content": "You are an OpenAPI expert. Enhance specifications with missing details and best practices.",
+                    "name": "OpenAPIEnhancer",
+                },
+                {"role": "user", "content": prompt},
+            ]
+        )
 
         enhanced_content = response.content.strip()
 
@@ -275,11 +314,16 @@ Requirements:
 
 Generate a professional, well-structured README.md"""
 
-        response = await context.provider.client.send_request([
-            {"role": "system", "content": "You are a technical writer who creates professional README files. Include markdown formatting, code blocks, and proper structure.",
-                 "name": "READMEGenerator"},
-            {"role": "user", "content": prompt}
-        ])
+        response = await context.provider.client.send_request(
+            [
+                {
+                    "role": "system",
+                    "content": "You are a technical writer who creates professional README files. Include markdown formatting, code blocks, and proper structure.",
+                    "name": "READMEGenerator",
+                },
+                {"role": "user", "content": prompt},
+            ]
+        )
 
         readme_content = response.content.strip()
 
@@ -304,7 +348,7 @@ Saved to: README.md"""
             "has_docs": False,
             "package_manager": None,
             "framework": None,
-            "dependencies": []
+            "dependencies": [],
         }
 
         # Scan project directory
@@ -319,6 +363,7 @@ Saved to: README.md"""
                     try:
                         content = await file_ops.read_file(str(item))
                         import json
+
                         pkg_data = json.loads(content)
                         deps = list(pkg_data.get("dependencies", {}).keys())
                         info["dependencies"].extend(deps[:5])  # Limit to 5
@@ -379,6 +424,7 @@ from ..registry import command_registry
 command_registry.register(DocsCommand())
 command_registry.register(ApiDocsCommand())
 command_registry.register(READMECommand())
+
 
 def register():
     """Register all documentation commands."""

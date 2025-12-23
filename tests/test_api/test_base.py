@@ -1,8 +1,9 @@
 """Test BaseApiClient abstract class and common functionality."""
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from typing import Any, Dict, List
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from vibe_coder.api.base import BaseApiClient
 from vibe_coder.types.api import ApiMessage, ApiResponse, MessageRole, TokenUsage
@@ -264,6 +265,6 @@ class TestBaseApiClient:
     @pytest.mark.asyncio
     async def test_close(self):
         """Test closing the HTTP client."""
-        with patch.object(self.client.client, 'aclose', new_callable=AsyncMock) as mock_close:
+        with patch.object(self.client.client, "aclose", new_callable=AsyncMock) as mock_close:
             await self.client.close()
             mock_close.assert_called_once()

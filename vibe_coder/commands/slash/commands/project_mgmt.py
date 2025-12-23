@@ -3,7 +3,7 @@
 import json
 import subprocess
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 from ..base import CommandContext, SlashCommand
 from ..file_ops import FileOperations
@@ -81,15 +81,11 @@ Examples:
             subprocess.run(["git", "init"], cwd=project_dir, capture_output=True)
 
             # Create initial commit
-            subprocess.run(
-                ["git", "add", "."],
-                cwd=project_dir,
-                capture_output=True
-            )
+            subprocess.run(["git", "add", "."], cwd=project_dir, capture_output=True)
             subprocess.run(
                 ["git", "commit", "-m", "Initial commit from vibe-coder"],
                 cwd=project_dir,
-                capture_output=True
+                capture_output=True,
             )
 
             return f"""✅ Project initialized successfully!
@@ -114,7 +110,9 @@ Next steps:
         file_ops = FileOperations(str(project_dir))
 
         # Python API with FastAPI
-        await file_ops.write_file("requirements.txt", """fastapi>=0.104.0
+        await file_ops.write_file(
+            "requirements.txt",
+            """fastapi>=0.104.0
 uvicorn[standard]>=0.24.0
 pydantic>=2.5.0
 python-multipart>=0.0.6
@@ -124,9 +122,12 @@ python-dotenv>=1.0.0
 httpx>=0.25.0
 pytest>=7.4.0
 pytest-asyncio>=0.21.0
-""")
+""",
+        )
 
-        await file_ops.write_file("main.py", f'''from fastapi import FastAPI
+        await file_ops.write_file(
+            "main.py",
+            f"""from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer
 import uvicorn
@@ -159,9 +160,12 @@ async def health_check():
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
-''')
+""",
+        )
 
-        await file_ops.write_file("app/models.py", """from pydantic import BaseModel
+        await file_ops.write_file(
+            "app/models.py",
+            """from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
@@ -179,9 +183,12 @@ class HealthResponse(BaseResponse):
 class ErrorResponse(BaseResponse):
     error_code: Optional[str] = None
     details: Optional[dict] = None
-""")
+""",
+        )
 
-        await file_ops.write_file("tests/test_main.py", """import pytest
+        await file_ops.write_file(
+            "tests/test_main.py",
+            """import pytest
 from fastapi.testclient import TestClient
 from main import app
 
@@ -198,17 +205,23 @@ def test_health_check():
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "healthy"
-""")
+""",
+        )
 
-        await file_ops.write_file(".env.example", """# Environment variables
+        await file_ops.write_file(
+            ".env.example",
+            """# Environment variables
 DEBUG=True
 SECRET_KEY=your-secret-key-here
 DATABASE_URL=sqlite:///./app.db
 API_V1_STR=/api/v1
 PROJECT_NAME={project_name}
-""")
+""",
+        )
 
-        await file_ops.write_file(".gitignore", """# Python
+        await file_ops.write_file(
+            ".gitignore",
+            """# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -234,21 +247,27 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
-""")
+""",
+        )
 
     async def _init_cli_project(self, project_dir: Path, project_name: str):
         """Initialize a CLI project."""
         file_ops = FileOperations(str(project_dir))
 
-        await file_ops.write_file("requirements.txt", """click>=8.1.0
+        await file_ops.write_file(
+            "requirements.txt",
+            """click>=8.1.0
 rich>=13.7.0
 typer>=0.9.0
 pydantic>=2.5.0
 pytest>=7.4.0
 pytest-cov>=4.1.0
-""")
+""",
+        )
 
-        await file_ops.write_file(f"{project_name.replace('-', '_')}.py", f'''"""CLI application for {project_name}."""
+        await file_ops.write_file(
+            f"{project_name.replace('-', '_')}.py",
+            f'''"""CLI application for {project_name}."""
 
 import typer
 from rich.console import Console
@@ -286,9 +305,12 @@ def status():
 
 if __name__ == "__main__":
     app()
-''')
+''',
+        )
 
-        await file_ops.write_file("setup.py", f'''from setuptools import setup, find_packages
+        await file_ops.write_file(
+            "setup.py",
+            f"""from setuptools import setup, find_packages
 
 setup(
     name="{project_name}",
@@ -305,13 +327,16 @@ setup(
         ],
     }},
 )
-''')
+""",
+        )
 
     async def _init_lib_project(self, project_dir: Path, project_name: str):
         """Initialize a library project."""
         file_ops = FileOperations(str(project_dir))
 
-        await file_ops.write_file("pyproject.toml", f'''[build-system]
+        await file_ops.write_file(
+            "pyproject.toml",
+            f"""[build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
@@ -355,10 +380,13 @@ line-length = 100
 [tool.isort]
 profile = "black"
 line_length = 100
-''')
+""",
+        )
 
         await file_ops.write_file("src/__init__.py", "")
-        await file_ops.write_file(f"src/{project_name.replace('-', '_')}/__init__.py", f'''"""{project_name.title()} - A Python library."""
+        await file_ops.write_file(
+            f"src/{project_name.replace('-', '_')}/__init__.py",
+            f'''"""{project_name.title()} - A Python library."""
 
 __version__ = "0.1.0"
 __author__ = "Your Name"
@@ -366,9 +394,12 @@ __author__ = "Your Name"
 from .core import {project_name.replace('-', '_').title()}
 
 __all__ = ["{project_name.replace('-', '_').title()}"]
-''')
+''',
+        )
 
-        await file_ops.write_file(f"src/{project_name.replace('-', '_')}/core.py", f'''"""Core functionality for {project_name}."""
+        await file_ops.write_file(
+            f"src/{project_name.replace('-', '_')}/core.py",
+            f'''"""Core functionality for {project_name}."""
 
 from typing import Any, Dict, List
 
@@ -391,13 +422,16 @@ class {project_name.replace('-', '_').title()}:
             "version": "0.1.0",
             "config": self.config,
         }}
-''')
+''',
+        )
 
     async def _init_web_project(self, project_dir: Path, project_name: str):
         """Initialize a web project."""
         file_ops = FileOperations(str(project_dir))
 
-        await file_ops.write_file("package.json", f'''{{
+        await file_ops.write_file(
+            "package.json",
+            f"""{{
   "name": "{project_name}",
   "version": "0.1.0",
   "description": "Web application for {project_name}",
@@ -423,21 +457,27 @@ class {project_name.replace('-', '_').title()}:
     "eslint": "^8.45.0",
     "typescript": "^5.0.0"
   }}
-}}''')
+}}""",
+        )
 
-        await file_ops.write_file("vite.config.ts", '''import { defineConfig } from 'vite'
+        await file_ops.write_file(
+            "vite.config.ts",
+            """import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
 })
-''')
+""",
+        )
 
     async def _init_ml_project(self, project_dir: Path, project_name: str):
         """Initialize an ML project."""
         file_ops = FileOperations(str(project_dir))
 
-        await file_ops.write_file("requirements.txt", """numpy>=1.24.0
+        await file_ops.write_file(
+            "requirements.txt",
+            """numpy>=1.24.0
 pandas>=2.0.0
 scikit-learn>=1.3.0
 matplotlib>=3.7.0
@@ -446,9 +486,12 @@ jupyter>=1.0.0
 pytest>=7.4.0
 torch>=2.0.0
 transformers>=4.35.0
-""")
+""",
+        )
 
-        await file_ops.write_file("src/data.py", """import pandas as pd
+        await file_ops.write_file(
+            "src/data.py",
+            """import pandas as pd
 import numpy as np
 from typing import Tuple, Optional
 
@@ -470,13 +513,16 @@ def split_data(X: np.ndarray, y: np.ndarray, test_size: float = 0.2) -> Tuple:
     \"\"\"Split data into train and test sets.\"\"\"
     from sklearn.model_selection import train_test_split
     return train_test_split(X, y, test_size=test_size, random_state=42)
-""")
+""",
+        )
 
     async def _init_data_project(self, project_dir: Path, project_name: str):
         """Initialize a data science project."""
         file_ops = FileOperations(str(project_dir))
 
-        await file_ops.write_file("requirements.txt", """pandas>=2.0.0
+        await file_ops.write_file(
+            "requirements.txt",
+            """pandas>=2.0.0
 numpy>=1.24.0
 matplotlib>=3.7.0
 seaborn>=0.12.0
@@ -484,9 +530,12 @@ plotly>=5.17.0
 jupyter>=1.0.0
 scipy>=1.11.0
 statsmodels>=0.14.0
-""")
+""",
+        )
 
-        await file_ops.write_file("analysis.ipynb", '''{
+        await file_ops.write_file(
+            "analysis.ipynb",
+            """{
  "cells": [
   {
    "cell_type": "markdown",
@@ -494,7 +543,9 @@ statsmodels>=0.14.0
    "source": [
     "# Data Analysis Notebook\\n",
     "\\n",
-    "This notebook contains the analysis for ''' + project_name + '''"
+    "This notebook contains the analysis for """
+            + project_name
+            + """"
    ]
   },
   {
@@ -514,7 +565,8 @@ statsmodels>=0.14.0
  "metadata": {},
  "nbformat": 4,
  "nbformat_minor": 2
-}''')
+}""",
+        )
 
     async def _init_microservice_project(self, project_dir: Path, project_name: str):
         """Initialize a microservice project."""
@@ -524,7 +576,9 @@ statsmodels>=0.14.0
         # Add Docker files
         file_ops = FileOperations(str(project_dir))
 
-        await file_ops.write_file("Dockerfile", f'''FROM python:3.9-slim
+        await file_ops.write_file(
+            "Dockerfile",
+            f"""FROM python:3.9-slim
 
 WORKDIR /app
 
@@ -536,9 +590,12 @@ COPY . .
 EXPOSE 8000
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-''')
+""",
+        )
 
-        await file_ops.write_file("docker-compose.yml", f'''version: '3.8'
+        await file_ops.write_file(
+            "docker-compose.yml",
+            f"""version: '3.8'
 
 services:
   {project_name}:
@@ -561,13 +618,16 @@ services:
 
 volumes:
   postgres_data:
-''')
+""",
+        )
 
     async def _init_docs_project(self, project_dir: Path, project_name: str):
         """Initialize a documentation project."""
         file_ops = FileOperations(str(project_dir))
 
-        await file_ops.write_file("mkdocs.yml", f'''site_name: {project_name.title()}
+        await file_ops.write_file(
+            "mkdocs.yml",
+            f"""site_name: {project_name.title()}
 site_description: Documentation for {project_name}
 
 nav:
@@ -590,9 +650,12 @@ markdown_extensions:
   - codehilite
   - admonition
   - toc
-''')
+""",
+        )
 
-        await file_ops.write_file("docs/index.md", f'''# Welcome to {project_name.title()}
+        await file_ops.write_file(
+            "docs/index.md",
+            f"""# Welcome to {project_name.title()}
 
 This is the documentation for {project_name}.
 
@@ -601,13 +664,16 @@ This is the documentation for {project_name}.
 1. Read the [Getting Started guide](getting-started.md)
 2. Check the [API Reference](api.md)
 3. Browse the [Examples](examples.md)
-''')
+""",
+        )
 
     async def _get_next_steps(self, template: str) -> str:
         """Get next steps based on template."""
         steps = {
             "api": "\n🚀 Run your API:\n   pip install -r requirements.txt\n   uvicorn main:app --reload",
-            "cli": "\n🔧 Install your CLI:\n   pip install -e .\n   " + (Path.cwd().name if Path.cwd().name else "my-cli") + " --help",
+            "cli": "\n🔧 Install your CLI:\n   pip install -e .\n   "
+            + (Path.cwd().name if Path.cwd().name else "my-cli")
+            + " --help",
             "lib": "\n📦 Install in development mode:\n   pip install -e .[dev]",
             "web": "\n🌐 Start development:\n   npm install\n   npm run dev",
             "ml": "\n🧪 Start experimenting:\n   pip install -r requirements.txt\n   jupyter notebook",
@@ -666,9 +732,16 @@ Examples:
     async def _update_dependencies(self, context: CommandContext) -> str:
         """Update project dependencies."""
         project_files = [
-            "package.json", "yarn.lock", "pnpm-lock.yaml",
-            "requirements.txt", "poetry.lock", "Pipfile.lock",
-            "Cargo.lock", "go.mod", "pom.xml", "build.gradle"
+            "package.json",
+            "yarn.lock",
+            "pnpm-lock.yaml",
+            "requirements.txt",
+            "poetry.lock",
+            "Pipfile.lock",
+            "Cargo.lock",
+            "go.mod",
+            "pom.xml",
+            "build.gradle",
         ]
 
         detected_project = None
@@ -720,7 +793,9 @@ Examples:
 
         # Python
         if Path(context.working_directory / "requirements.txt").exists():
-            results.append("🐍 Python:\n   Run: pip-autoremove\n   Install: pip install pip-autoremove")
+            results.append(
+                "🐍 Python:\n   Run: pip-autoremove\n   Install: pip install pip-autoremove"
+            )
 
         # Node.js
         if Path(context.working_directory / "package.json").exists():
@@ -790,19 +865,19 @@ class SecurityCommand(SlashCommand):
         """Detect programming language from filename."""
         ext = Path(filename).suffix.lower()
         lang_map = {
-            '.py': 'python',
-            '.js': 'javascript',
-            '.ts': 'typescript',
-            '.java': 'java',
-            '.go': 'go',
-            '.rb': 'ruby',
-            '.php': 'php',
-            '.cs': 'csharp',
-            '.cpp': 'cpp',
-            '.c': 'c',
-            '.rs': 'rust',
+            ".py": "python",
+            ".js": "javascript",
+            ".ts": "typescript",
+            ".java": "java",
+            ".go": "go",
+            ".rb": "ruby",
+            ".php": "php",
+            ".cs": "csharp",
+            ".cpp": "cpp",
+            ".c": "c",
+            ".rs": "rust",
         }
-        return lang_map.get(ext, 'unknown')
+        return lang_map.get(ext, "unknown")
 
     async def _scan_file(self, context: CommandContext, filepath: str, language: str) -> str:
         """Scan a single file for security issues."""
@@ -837,11 +912,16 @@ Provide:
 - Recommended fixes for each issue"""
 
             # Get AI response
-            response = await context.provider.client.send_request([
-                {"role": "system", "content": "You are a security expert. Identify potential vulnerabilities in code and provide actionable recommendations for fixing them.",
-                 "name": "SecurityScanner"},
-                {"role": "user", "content": prompt}
-            ])
+            response = await context.provider.client.send_request(
+                [
+                    {
+                        "role": "system",
+                        "content": "You are a security expert. Identify potential vulnerabilities in code and provide actionable recommendations for fixing them.",
+                        "name": "SecurityScanner",
+                    },
+                    {"role": "user", "content": prompt},
+                ]
+            )
 
             return f"""Security scan completed for: {filepath}
 
@@ -867,7 +947,19 @@ bandit {filepath}
         dir_path = Path(directory) if directory != "." else Path(context.working_directory)
 
         # Find code files to scan
-        code_extensions = ['.py', '.js', '.ts', '.java', '.go', '.rb', '.php', '.cs', '.cpp', '.c', '.rs']
+        code_extensions = [
+            ".py",
+            ".js",
+            ".ts",
+            ".java",
+            ".go",
+            ".rb",
+            ".php",
+            ".cs",
+            ".cpp",
+            ".c",
+            ".rs",
+        ]
         code_files = []
 
         for ext in code_extensions:
@@ -888,14 +980,17 @@ bandit {filepath}
 
             # Quick scan for common issues
             try:
-                content = file_path.read_text(encoding='utf-8')
+                content = file_path.read_text(encoding="utf-8")
 
                 # Check for common vulnerability patterns
                 issues = []
 
                 # Check for hard-coded secrets
                 import re
-                if re.search(r'(password|secret|key)\s*[=:]\s*["\'][^"\']+["\']', content, re.IGNORECASE):
+
+                if re.search(
+                    r'(password|secret|key)\s*[=:]\s*["\'][^"\']+["\']', content, re.IGNORECASE
+                ):
                     issues.append("Potential hard-coded secret")
 
                 # Check for SQL injection patterns
@@ -903,7 +998,7 @@ bandit {filepath}
                     issues.append("Potential SQL injection")
 
                 # Check for eval usage
-                if 'eval(' in content or 'exec(' in content:
+                if "eval(" in content or "exec(" in content:
                     issues.append("Dangerous eval/exec usage")
 
                 if issues:
@@ -937,6 +1032,7 @@ from ..registry import command_registry
 command_registry.register(InitCommand())
 command_registry.register(DependenciesCommand())
 command_registry.register(SecurityCommand())
+
 
 def register():
     """Register all project management commands."""

@@ -1,8 +1,9 @@
 """
 Test config command functionality.
 """
+
 import os
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -29,21 +30,18 @@ def mock_providers():
             endpoint="https://api.openai.com/v1",
             model="gpt-4",
             temperature=0.7,
-            max_tokens=2000
+            max_tokens=2000,
         ),
         "claude": AIProvider(
             name="claude",
             api_key="sk-ant-claude456",
             endpoint="https://api.anthropic.com",
             model="claude-3-sonnet",
-            temperature=0.5
+            temperature=0.5,
         ),
         "local": AIProvider(
-            name="local",
-            api_key=None,
-            endpoint="http://localhost:11434",
-            model="llama2"
-        )
+            name="local", api_key=None, endpoint="http://localhost:11434", model="llama2"
+        ),
     }
 
 
@@ -83,7 +81,9 @@ class TestConfigCommandListProviders:
             assert "No providers configured" in str(call_args)
 
     @patch("vibe_coder.commands.config.config_manager")
-    async def test_list_providers_with_current_marker(self, mock_config, config_command, mock_providers):
+    async def test_list_providers_with_current_marker(
+        self, mock_config, config_command, mock_providers
+    ):
         """Test listing providers with current provider marked."""
         mock_config.list_providers.return_value = mock_providers
         mock_config.get_current_provider_name.return_value = "claude"
@@ -156,7 +156,7 @@ class TestConfigCommandShowProvider:
             model="test-model",
             temperature=0.8,
             max_tokens=1500,
-            headers={"Custom-Header": "value"}
+            headers={"Custom-Header": "value"},
         )
 
         with patch.object(config_command.console, "print"):
@@ -170,7 +170,9 @@ class TestConfigCommandAddProvider:
 
     @patch("vibe_coder.commands.config.SetupCommand")
     @patch("vibe_coder.commands.config.config_manager")
-    async def test_add_provider_success(self, mock_config, mock_setup, config_command, mock_providers):
+    async def test_add_provider_success(
+        self, mock_config, mock_setup, config_command, mock_providers
+    ):
         """Test successfully adding a provider."""
         mock_setup_instance = AsyncMock()
         mock_setup_instance.run.return_value = True
@@ -209,7 +211,9 @@ class TestConfigCommandEditProvider:
 
     @patch("vibe_coder.commands.config.questionary")
     @patch("vibe_coder.commands.config.config_manager")
-    async def test_edit_provider_success(self, mock_config, mock_questionary, config_command, mock_providers):
+    async def test_edit_provider_success(
+        self, mock_config, mock_questionary, config_command, mock_providers
+    ):
         """Test successfully editing a provider."""
         provider = mock_providers["openai"]
         mock_config.get_provider.return_value = provider
@@ -218,7 +222,7 @@ class TestConfigCommandEditProvider:
         mock_questionary.text.return_value.ask.side_effect = [
             "gpt-4-turbo",  # new model
             "0.9",  # new temperature
-            "3000"  # new max_tokens
+            "3000",  # new max_tokens
         ]
 
         with patch.object(config_command.console, "print"):
@@ -293,7 +297,9 @@ class TestConfigCommandDeleteProvider:
 
     @patch("vibe_coder.commands.config.questionary")
     @patch("vibe_coder.commands.config.config_manager")
-    async def test_delete_provider_success(self, mock_config, mock_questionary, config_command, mock_providers):
+    async def test_delete_provider_success(
+        self, mock_config, mock_questionary, config_command, mock_providers
+    ):
         """Test successfully deleting a provider."""
         mock_config.get_provider.return_value = mock_providers["local"]
         mock_questionary.confirm.return_value.ask.return_value = True
@@ -314,7 +320,9 @@ class TestConfigCommandDeleteProvider:
 
     @patch("vibe_coder.commands.config.questionary")
     @patch("vibe_coder.commands.config.config_manager")
-    async def test_delete_provider_cancelled(self, mock_config, mock_questionary, config_command, mock_providers):
+    async def test_delete_provider_cancelled(
+        self, mock_config, mock_questionary, config_command, mock_providers
+    ):
         """Test cancelling provider deletion."""
         mock_config.get_provider.return_value = mock_providers["claude"]
         mock_questionary.confirm.return_value.ask.return_value = False
@@ -335,7 +343,7 @@ class TestConfigCommandDeleteProvider:
         mock_questionary.confirm.return_value.ask.return_value = True
         mock_config.list_providers.return_value = {
             "openai": mock_providers["openai"],
-            "claude": mock_providers["claude"]
+            "claude": mock_providers["claude"],
         }
 
         with patch.object(config_command.console, "print"):
@@ -420,8 +428,10 @@ class TestConfigCommandMainFlow:
 
     async def test_run_unknown_action(self, config_command):
         """Test run with unknown action."""
-        with patch.object(config_command.console, "print") as mock_print, \
-             patch.object(config_command, "_show_available_actions") as mock_show:
+        with (
+            patch.object(config_command.console, "print") as mock_print,
+            patch.object(config_command, "_show_available_actions") as mock_show,
+        ):
             result = await config_command.run("unknown")
             assert result is False
             mock_print.assert_called()
@@ -429,8 +439,8 @@ class TestConfigCommandMainFlow:
 
     async def test_run_keyboard_interrupt(self, config_command):
         """Test run with keyboard interrupt."""
-        with patch.object(config_command.console, "print") as mock_print:
-            result = await config_command.run("list")
+        with patch.object(config_command.console, "print"):
+            await config_command.run("list")
             # The interrupt would happen inside the actual method
             assert True  # Placeholder for actual interrupt test
 

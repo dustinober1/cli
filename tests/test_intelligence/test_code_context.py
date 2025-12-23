@@ -5,9 +5,6 @@ This module tests the CodeContextProvider class which provides intelligent
 context extraction for AI-powered code operations.
 """
 
-import asyncio
-import tempfile
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -18,7 +15,7 @@ from vibe_coder.intelligence.code_context import (
     ContextResult,
     OperationType,
 )
-from vibe_coder.intelligence.types import ContextItem, FileNode, FunctionSignature, ClassSignature
+from vibe_coder.intelligence.types import ClassSignature, ContextItem, FileNode, FunctionSignature
 
 
 class TestContextRequest:
@@ -71,8 +68,10 @@ class TestCodeContextProviderInitialization:
         """Test provider initialization with default parameters."""
         mock_mapper = MagicMock()
 
-        with patch('vibe_coder.intelligence.code_context.TokenCounter'), \
-             patch('vibe_coder.intelligence.code_context.TokenBudgeter'):
+        with (
+            patch("vibe_coder.intelligence.code_context.TokenCounter"),
+            patch("vibe_coder.intelligence.code_context.TokenBudgeter"),
+        ):
             provider = CodeContextProvider(mock_mapper)
 
         assert provider.repo_mapper == mock_mapper
@@ -83,8 +82,10 @@ class TestCodeContextProviderInitialization:
         """Test provider initialization with custom model."""
         mock_mapper = MagicMock()
 
-        with patch('vibe_coder.intelligence.code_context.TokenCounter'), \
-             patch('vibe_coder.intelligence.code_context.TokenBudgeter'):
+        with (
+            patch("vibe_coder.intelligence.code_context.TokenCounter"),
+            patch("vibe_coder.intelligence.code_context.TokenBudgeter"),
+        ):
             provider = CodeContextProvider(mock_mapper, model_name="gpt-3.5-turbo")
 
         assert provider.model_name == "gpt-3.5-turbo"
@@ -99,8 +100,10 @@ class TestGenerationContext:
         mock_mapper = AsyncMock()
         mock_mapper.scan_repository.return_value = None
 
-        with patch('vibe_coder.intelligence.code_context.TokenCounter'), \
-             patch('vibe_coder.intelligence.code_context.TokenBudgeter'):
+        with (
+            patch("vibe_coder.intelligence.code_context.TokenCounter"),
+            patch("vibe_coder.intelligence.code_context.TokenBudgeter"),
+        ):
             provider = CodeContextProvider(mock_mapper)
             provider._get_project_overview = MagicMock(return_value="# Project Overview")
 
@@ -119,11 +122,13 @@ class TestGenerationContext:
         """Test generation context with target file."""
         # Create a test file
         test_file = tmp_path / "target.py"
-        test_file.write_text("""
+        test_file.write_text(
+            """
 def existing_function():
     '''Existing function docstring.'''
     pass
-""")
+"""
+        )
 
         mock_mapper = AsyncMock()
         mock_mapper.scan_repository.return_value = None
@@ -132,34 +137,39 @@ def existing_function():
                 path="target.py",
                 language="python",
                 lines_of_code=5,
-                functions=[FunctionSignature(
-                    name="existing_function",
-                    module_path="target",
-                    file_path="target.py",
-                    line_start=2,
-                    line_end=4,
-                    docstring="Existing function docstring."
-                )],
-                classes=[]
+                functions=[
+                    FunctionSignature(
+                        name="existing_function",
+                        module_path="target",
+                        file_path="target.py",
+                        line_start=2,
+                        line_end=4,
+                        docstring="Existing function docstring.",
+                    )
+                ],
+                classes=[],
             )
         }
 
         # Mock the file context method
         async def mock_get_file_context(file_path, include_docstrings=True):
             if file_path == "target.py":
-                return "# File: target.py\ndef existing_function():\n    '''Existing function docstring.'''\n    pass"
+                return (
+                    "# File: target.py\ndef existing_function():\n"
+                    "    '''Existing function docstring.'''\n    pass"
+                )
             return None
 
-        with patch('vibe_coder.intelligence.code_context.TokenCounter'), \
-             patch('vibe_coder.intelligence.code_context.TokenBudgeter'):
+        with (
+            patch("vibe_coder.intelligence.code_context.TokenCounter"),
+            patch("vibe_coder.intelligence.code_context.TokenBudgeter"),
+        ):
             provider = CodeContextProvider(mock_mapper)
             provider._get_project_overview = MagicMock(return_value="# Project Overview")
             provider._get_file_context = mock_get_file_context
 
             request = ContextRequest(
-                operation=OperationType.GENERATE,
-                target_file="target.py",
-                token_budget=4000
+                operation=OperationType.GENERATE, target_file="target.py", token_budget=4000
             )
             result = await provider.get_context(request)
 
@@ -183,7 +193,7 @@ def existing_function():
                 importance=0.8,
                 token_count=20,
                 type="file",
-                metadata={"functions": 1, "classes": 0}
+                metadata={"functions": 1, "classes": 0},
             ),
             ContextItem(
                 path="models.py",
@@ -191,20 +201,22 @@ def existing_function():
                 importance=0.6,
                 token_count=20,
                 type="file",
-                metadata={"functions": 0, "classes": 1}
+                metadata={"functions": 0, "classes": 1},
             ),
         ]
         mock_mapper.get_context_items.return_value = context_items
 
-        with patch('vibe_coder.intelligence.code_context.TokenCounter'), \
-             patch('vibe_coder.intelligence.code_context.TokenBudgeter'):
+        with (
+            patch("vibe_coder.intelligence.code_context.TokenCounter"),
+            patch("vibe_coder.intelligence.code_context.TokenBudgeter"),
+        ):
             provider = CodeContextProvider(mock_mapper)
             provider._get_project_overview = MagicMock(return_value="# Project Overview")
 
             request = ContextRequest(
                 operation=OperationType.GENERATE,
                 related_files=["utils.py", "models.py"],
-                token_budget=8000
+                token_budget=8000,
             )
             result = await provider._get_generation_context(request)
 
@@ -228,22 +240,28 @@ class TestFixContext:
                 path="buggy.py",
                 language="python",
                 lines_of_code=10,
-                functions=[FunctionSignature(
-                    name="buggy_function",
-                    module_path="buggy",
-                    file_path="buggy.py",
-                    line_start=1,
-                    line_end=10
-                )],
-                classes=[]
+                functions=[
+                    FunctionSignature(
+                        name="buggy_function",
+                        module_path="buggy",
+                        file_path="buggy.py",
+                        line_start=1,
+                        line_end=10,
+                    )
+                ],
+                classes=[],
             )
         }
 
         async def mock_get_file_content(file_path):
-            return "def buggy_function():\n    undefined_variable = x\n    return undefined_variable"
+            return (
+                "def buggy_function():\n    undefined_variable = x\n    return undefined_variable"
+            )
 
-        with patch('vibe_coder.intelligence.code_context.TokenCounter'), \
-             patch('vibe_coder.intelligence.code_context.TokenBudgeter'):
+        with (
+            patch("vibe_coder.intelligence.code_context.TokenCounter"),
+            patch("vibe_coder.intelligence.code_context.TokenBudgeter"),
+        ):
             provider = CodeContextProvider(mock_mapper)
             provider._get_project_overview = MagicMock(return_value="# Project Overview")
             provider._get_file_content = mock_get_file_content
@@ -251,7 +269,7 @@ class TestFixContext:
             request = ContextRequest(
                 operation=OperationType.FIX,
                 target_file="buggy.py",
-                target_function="buggy_function"
+                target_function="buggy_function",
             )
             result = await provider.get_context(request)
 
@@ -269,21 +287,23 @@ class TestFixContext:
                 language="python",
                 lines_of_code=5,
                 imports=["utils"],
-                dependencies={"utils.py"}
+                dependencies={"utils.py"},
             ),
             "utils.py": FileNode(
                 path="utils.py",
                 language="python",
                 lines_of_code=10,
-                functions=[FunctionSignature(
-                    name="helper",
-                    module_path="utils",
-                    file_path="utils.py",
-                    line_start=1,
-                    line_end=10
-                )],
-                classes=[]
-            )
+                functions=[
+                    FunctionSignature(
+                        name="helper",
+                        module_path="utils",
+                        file_path="utils.py",
+                        line_start=1,
+                        line_end=10,
+                    )
+                ],
+                classes=[],
+            ),
         }
 
         async def mock_get_file_content(file_path):
@@ -293,16 +313,15 @@ class TestFixContext:
                 return "def helper():\n    return 'help'"
             return None
 
-        with patch('vibe_coder.intelligence.code_context.TokenCounter'), \
-             patch('vibe_coder.intelligence.code_context.TokenBudgeter'):
+        with (
+            patch("vibe_coder.intelligence.code_context.TokenCounter"),
+            patch("vibe_coder.intelligence.code_context.TokenBudgeter"),
+        ):
             provider = CodeContextProvider(mock_mapper)
             provider._get_project_overview = MagicMock(return_value="# Project Overview")
             provider._get_file_content = mock_get_file_content
 
-            request = ContextRequest(
-                operation=OperationType.FIX,
-                target_file="main.py"
-            )
+            request = ContextRequest(operation=OperationType.FIX, target_file="main.py")
             result = await provider.get_context(request)
 
         assert "main.py" in result.context
@@ -328,7 +347,7 @@ class TestRefactorContext:
             line_end=20,
             parameters=["param1", "param2"],
             complexity=10,
-            docstring="Legacy function that needs refactoring."
+            docstring="Legacy function that needs refactoring.",
         )
 
         mock_mapper._repo_map = {
@@ -337,7 +356,7 @@ class TestRefactorContext:
                 language="python",
                 lines_of_code=30,
                 functions=[func_signature],
-                classes=[]
+                classes=[],
             )
         }
 
@@ -354,8 +373,10 @@ def legacy_function(param1, param2):
     return result
 """
 
-        with patch('vibe_coder.intelligence.code_context.TokenCounter'), \
-             patch('vibe_coder.intelligence.code_context.TokenBudgeter'):
+        with (
+            patch("vibe_coder.intelligence.code_context.TokenCounter"),
+            patch("vibe_coder.intelligence.code_context.TokenBudgeter"),
+        ):
             provider = CodeContextProvider(mock_mapper)
             provider._get_project_overview = MagicMock(return_value="# Project Overview")
             provider._get_file_content = mock_get_file_content
@@ -363,7 +384,7 @@ def legacy_function(param1, param2):
             request = ContextRequest(
                 operation=OperationType.REFACTOR,
                 target_file="legacy.py",
-                target_function="legacy_function"
+                target_function="legacy_function",
             )
             result = await provider.get_context(request)
 
@@ -391,10 +412,10 @@ def legacy_function(param1, param2):
                     file_path="legacy.py",
                     line_start=10,
                     line_end=30,
-                    is_method=True
+                    is_method=True,
                 )
             ],
-            attributes=["_old_attr1", "_old_attr2"]
+            attributes=["_old_attr1", "_old_attr2"],
         )
 
         mock_mapper._repo_map = {
@@ -403,7 +424,7 @@ def legacy_function(param1, param2):
                 language="python",
                 lines_of_code=60,
                 functions=[],
-                classes=[class_signature]
+                classes=[class_signature],
             )
         }
 
@@ -421,8 +442,10 @@ class LegacyClass:
         pass
 """
 
-        with patch('vibe_coder.intelligence.code_context.TokenCounter'), \
-             patch('vibe_coder.intelligence.code_context.TokenBudgeter'):
+        with (
+            patch("vibe_coder.intelligence.code_context.TokenCounter"),
+            patch("vibe_coder.intelligence.code_context.TokenBudgeter"),
+        ):
             provider = CodeContextProvider(mock_mapper)
             provider._get_project_overview = MagicMock(return_value="# Project Overview")
             provider._get_file_content = mock_get_file_content
@@ -430,7 +453,7 @@ class LegacyClass:
             request = ContextRequest(
                 operation=OperationType.REFACTOR,
                 target_file="legacy.py",
-                target_class="LegacyClass"
+                target_class="LegacyClass",
             )
             result = await provider.get_context(request)
 
@@ -461,10 +484,10 @@ class TestExplainContext:
                         file_path="complex.py",
                         line_start=1,
                         line_end=40,
-                        docstring="Complex algorithm implementation."
+                        docstring="Complex algorithm implementation.",
                     )
                 ],
-                imports=["numpy", "scipy"]
+                imports=["numpy", "scipy"],
             )
         }
 
@@ -484,16 +507,15 @@ def complex_algorithm(data):
     return np.abs(result)
 """
 
-        with patch('vibe_coder.intelligence.code_context.TokenCounter'), \
-             patch('vibe_coder.intelligence.code_context.TokenBudgeter'):
+        with (
+            patch("vibe_coder.intelligence.code_context.TokenCounter"),
+            patch("vibe_coder.intelligence.code_context.TokenBudgeter"),
+        ):
             provider = CodeContextProvider(mock_mapper)
             provider._get_project_overview = MagicMock(return_value="# Project Overview")
             provider._get_file_content = mock_get_file_content
 
-            request = ContextRequest(
-                operation=OperationType.EXPLAIN,
-                target_file="complex.py"
-            )
+            request = ContextRequest(operation=OperationType.EXPLAIN, target_file="complex.py")
             result = await provider.get_context(request)
 
         assert "complex_algorithm" in result.context
@@ -517,7 +539,11 @@ class TestDocumentContext:
             file_path="docs.py",
             line_start=1,
             line_end=20,
-            docstring="This function does something important.\n\n    Args:\n        param: The parameter\n    Returns:\n        The result"
+            docstring=(
+                "This function does something important.\n\n"
+                "    Args:\n        param: The parameter\n    "
+                "Returns:\n        The result"
+            ),
         )
 
         mock_mapper._repo_map = {
@@ -526,7 +552,7 @@ class TestDocumentContext:
                 language="python",
                 lines_of_code=30,
                 functions=[func_with_docstring],
-                classes=[]
+                classes=[],
             )
         }
 
@@ -544,16 +570,16 @@ def documented_function(param):
     return param * 2
 """
 
-        with patch('vibe_coder.intelligence.code_context.TokenCounter'), \
-             patch('vibe_coder.intelligence.code_context.TokenBudgeter'):
+        with (
+            patch("vibe_coder.intelligence.code_context.TokenCounter"),
+            patch("vibe_coder.intelligence.code_context.TokenBudgeter"),
+        ):
             provider = CodeContextProvider(mock_mapper)
             provider._get_project_overview = MagicMock(return_value="# Project Overview")
             provider._get_file_content = mock_get_file_content
 
             request = ContextRequest(
-                operation=OperationType.DOCUMENT,
-                target_file="docs.py",
-                include_docstrings=True
+                operation=OperationType.DOCUMENT, target_file="docs.py", include_docstrings=True
             )
             result = await provider.get_context(request)
 
@@ -573,7 +599,7 @@ def documented_function(param):
             file_path="docs.py",
             line_start=1,
             line_end=10,
-            docstring=None
+            docstring=None,
         )
 
         mock_mapper._repo_map = {
@@ -582,7 +608,7 @@ def documented_function(param):
                 language="python",
                 lines_of_code=15,
                 functions=[func_without_docstring],
-                classes=[]
+                classes=[],
             )
         }
 
@@ -593,16 +619,16 @@ def undocumented_function(param):
     return param * 2
 """
 
-        with patch('vibe_coder.intelligence.code_context.TokenCounter'), \
-             patch('vibe_coder.intelligence.code_context.TokenBudgeter'):
+        with (
+            patch("vibe_coder.intelligence.code_context.TokenCounter"),
+            patch("vibe_coder.intelligence.code_context.TokenBudgeter"),
+        ):
             provider = CodeContextProvider(mock_mapper)
             provider._get_project_overview = MagicMock(return_value="# Project Overview")
             provider._get_file_content = mock_get_file_content
 
             request = ContextRequest(
-                operation=OperationType.DOCUMENT,
-                target_file="docs.py",
-                include_docstrings=False
+                operation=OperationType.DOCUMENT, target_file="docs.py", include_docstrings=False
             )
             result = await provider.get_context(request)
 
@@ -629,7 +655,7 @@ class TestTestContext:
             line_end=15,
             parameters=["numbers"],
             return_type="int",
-            docstring="Calculate sum of numbers in a list."
+            docstring="Calculate sum of numbers in a list.",
         )
 
         mock_mapper._repo_map = {
@@ -639,15 +665,15 @@ class TestTestContext:
                 lines_of_code=20,
                 functions=[func_to_test],
                 classes=[],
-                imports=["typing"]
+                imports=["typing"],
             ),
             "tests/test_math.py": FileNode(
                 path="tests/test_math.py",
                 language="python",
                 lines_of_code=5,
                 functions=[],
-                classes=[]
-            )
+                classes=[],
+            ),
         }
 
         async def mock_get_file_content(file_path):
@@ -663,8 +689,10 @@ def calculate_sum(numbers: List[int]) -> int:
                 return "# Existing test file"
             return None
 
-        with patch('vibe_coder.intelligence.code_context.TokenCounter'), \
-             patch('vibe_coder.intelligence.code_context.TokenBudgeter'):
+        with (
+            patch("vibe_coder.intelligence.code_context.TokenCounter"),
+            patch("vibe_coder.intelligence.code_context.TokenBudgeter"),
+        ):
             provider = CodeContextProvider(mock_mapper)
             provider._get_project_overview = MagicMock(return_value="# Project Overview")
             provider._get_file_content = mock_get_file_content
@@ -673,7 +701,7 @@ def calculate_sum(numbers: List[int]) -> int:
                 operation=OperationType.TEST,
                 target_file="math.py",
                 target_function="calculate_sum",
-                include_tests=True
+                include_tests=True,
             )
             result = await provider.get_context(request)
 
@@ -703,7 +731,7 @@ def calculate_sum(numbers: List[int]) -> int:
                     line_end=15,
                     parameters=["a", "b"],
                     return_type="int",
-                    is_method=True
+                    is_method=True,
                 ),
                 FunctionSignature(
                     name="multiply",
@@ -713,9 +741,9 @@ def calculate_sum(numbers: List[int]) -> int:
                     line_end=25,
                     parameters=["a", "b"],
                     return_type="int",
-                    is_method=True
-                )
-            ]
+                    is_method=True,
+                ),
+            ],
         )
 
         mock_mapper._repo_map = {
@@ -724,7 +752,7 @@ def calculate_sum(numbers: List[int]) -> int:
                 language="python",
                 lines_of_code=50,
                 functions=[],
-                classes=[class_to_test]
+                classes=[class_to_test],
             )
         }
 
@@ -740,16 +768,16 @@ class Calculator:
         return a * b
 """
 
-        with patch('vibe_coder.intelligence.code_context.TokenCounter'), \
-             patch('vibe_coder.intelligence.code_context.TokenBudgeter'):
+        with (
+            patch("vibe_coder.intelligence.code_context.TokenCounter"),
+            patch("vibe_coder.intelligence.code_context.TokenBudgeter"),
+        ):
             provider = CodeContextProvider(mock_mapper)
             provider._get_project_overview = MagicMock(return_value="# Project Overview")
             provider._get_file_content = mock_get_file_content
 
             request = ContextRequest(
-                operation=OperationType.TEST,
-                target_file="calc.py",
-                target_class="Calculator"
+                operation=OperationType.TEST, target_file="calc.py", target_class="Calculator"
             )
             result = await provider.get_context(request)
 
@@ -776,7 +804,7 @@ class TestContextWithBudgeting:
                 importance=0.9,
                 token_count=100,
                 type="file",
-                metadata={"functions": 2, "classes": 1}
+                metadata={"functions": 2, "classes": 1},
             ),
             ContextItem(
                 path="medium_importance.py",
@@ -784,7 +812,7 @@ class TestContextWithBudgeting:
                 importance=0.6,
                 token_count=200,
                 type="file",
-                metadata={"functions": 1, "classes": 0}
+                metadata={"functions": 1, "classes": 0},
             ),
             ContextItem(
                 path="low_importance.py",
@@ -792,7 +820,7 @@ class TestContextWithBudgeting:
                 importance=0.3,
                 token_count=300,
                 type="file",
-                metadata={"functions": 0, "classes": 0}
+                metadata={"functions": 0, "classes": 0},
             ),
         ]
         mock_mapper.get_context_items.return_value = context_items
@@ -808,16 +836,20 @@ class TestContextWithBudgeting:
         mock_budgeter.compress_context.return_value = context_items[:2]  # Filtered items
         mock_budgeter.estimate_tokens.return_value = 50
 
-        with patch('vibe_coder.intelligence.code_context.TokenCounter'), \
-             patch('vibe_coder.intelligence.code_context.TokenBudgeter', return_value=mock_budgeter):
+        with (
+            patch("vibe_coder.intelligence.code_context.TokenCounter"),
+            patch("vibe_coder.intelligence.code_context.TokenBudgeter", return_value=mock_budgeter),
+        ):
             provider = CodeContextProvider(mock_mapper)
 
             request = ContextRequest(
                 operation=OperationType.GENERATE,
                 target_file="high_importance.py",
-                token_budget=8000
+                token_budget=8000,
             )
-            result = await provider.get_context_with_budgeting(request, conversation_history_length=100)
+            result = await provider.get_context_with_budgeting(
+                request, conversation_history_length=100
+            )
 
         assert isinstance(result, ContextResult)
         assert len(result.files_included) == 2  # Filtered items
@@ -840,7 +872,7 @@ class TestContextWithBudgeting:
                 importance=0.8,
                 token_count=1000,
                 type="file",
-                metadata={}
+                metadata={},
             ),
         ]
         mock_mapper.get_context_items.return_value = context_items
@@ -856,15 +888,14 @@ class TestContextWithBudgeting:
         mock_budgeter.compress_context.return_value = []  # No items fit
         mock_budgeter.estimate_tokens.return_value = 50
 
-        with patch('vibe_coder.intelligence.code_context.TokenCounter'), \
-             patch('vibe_coder.intelligence.code_context.TokenBudgeter', return_value=mock_budgeter):
+        with (
+            patch("vibe_coder.intelligence.code_context.TokenCounter"),
+            patch("vibe_coder.intelligence.code_context.TokenBudgeter", return_value=mock_budgeter),
+        ):
             provider = CodeContextProvider(mock_mapper)
             provider._get_project_overview = MagicMock(return_value="# Small overview")
 
-            request = ContextRequest(
-                operation=OperationType.EXPLAIN,
-                token_budget=100
-            )
+            request = ContextRequest(operation=OperationType.EXPLAIN, token_budget=100)
             result = await provider.get_context_with_budgeting(request)
 
         assert len(result.files_included) == 0  # No files fit budget
@@ -880,8 +911,10 @@ class TestGenericContext:
         mock_mapper = AsyncMock()
         mock_mapper.scan_repository.return_value = None
 
-        with patch('vibe_coder.intelligence.code_context.TokenCounter'), \
-             patch('vibe_coder.intelligence.code_context.TokenBudgeter'):
+        with (
+            patch("vibe_coder.intelligence.code_context.TokenCounter"),
+            patch("vibe_coder.intelligence.code_context.TokenBudgeter"),
+        ):
             provider = CodeContextProvider(mock_mapper)
             provider._get_project_overview = MagicMock(return_value="# Generic Project Overview")
 
@@ -907,7 +940,7 @@ class TestContextResult:
             functions_included=["func1", "func2"],
             classes_included=["Class1"],
             token_estimate=1000,
-            truncated=False
+            truncated=False,
         )
 
         assert result.context == "# Sample context"
@@ -926,7 +959,7 @@ class TestContextResult:
             files_included=[],
             functions_included=[],
             classes_included=[],
-            token_estimate=100
+            token_estimate=100,
         )
 
         assert result.truncated is False  # Default value
@@ -948,8 +981,10 @@ class TestHelperMethods:
         mock_mapper._repo_map.total_lines = 1000
         mock_mapper._repo_map.languages = {"python": 8, "javascript": 2}
 
-        with patch('vibe_coder.intelligence.code_context.TokenCounter'), \
-             patch('vibe_coder.intelligence.code_context.TokenBudgeter'):
+        with (
+            patch("vibe_coder.intelligence.code_context.TokenCounter"),
+            patch("vibe_coder.intelligence.code_context.TokenBudgeter"),
+        ):
             provider = CodeContextProvider(mock_mapper)
             overview = provider._get_project_overview()
 

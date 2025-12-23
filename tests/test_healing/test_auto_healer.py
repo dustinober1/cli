@@ -1,12 +1,12 @@
 """Tests for the AutoHealer class."""
 
 import asyncio
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, mock_open
-from pathlib import Path
-from datetime import datetime
 import tempfile
-import time
+from datetime import datetime
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from vibe_coder.healing.auto_healer import AutoHealer
 from vibe_coder.healing.types import (
@@ -57,7 +57,7 @@ class TestAutoHealerInitialization:
         mock_api_client = MagicMock()
         with tempfile.TemporaryDirectory() as tmpdir:
             backup_dir = Path(tmpdir) / "backups"
-            healer = AutoHealer(mock_api_client, backup_dir=str(backup_dir))
+            AutoHealer(mock_api_client, backup_dir=str(backup_dir))
             assert backup_dir.exists()
 
 
@@ -98,12 +98,14 @@ class TestHealCode:
 
         # First call returns invalid, second returns valid
         mock_validator.validate.side_effect = [
-            [ValidationResult(
-                is_valid=False,
-                errors=["Syntax error: invalid syntax"],
-                strategy=ValidationStrategy.SYNTAX
-            )],
-            [ValidationResult(is_valid=True, strategy=ValidationStrategy.SYNTAX)]
+            [
+                ValidationResult(
+                    is_valid=False,
+                    errors=["Syntax error: invalid syntax"],
+                    strategy=ValidationStrategy.SYNTAX,
+                )
+            ],
+            [ValidationResult(is_valid=True, strategy=ValidationStrategy.SYNTAX)],
         ]
 
         # Mock AI response
@@ -135,7 +137,7 @@ class TestHealCode:
             ValidationResult(
                 is_valid=False,
                 errors=["Syntax error: invalid syntax"],
-                strategy=ValidationStrategy.SYNTAX
+                strategy=ValidationStrategy.SYNTAX,
             )
         ]
 
@@ -164,7 +166,7 @@ class TestHealCode:
             ValidationResult(
                 is_valid=False,
                 errors=["Type error: unsupported operand type"],
-                strategy=ValidationStrategy.TYPE_CHECK
+                strategy=ValidationStrategy.TYPE_CHECK,
             )
         ]
 
@@ -192,9 +194,7 @@ class TestHealCode:
 
         mock_validator.validate.return_value = [
             ValidationResult(
-                is_valid=False,
-                errors=["Syntax error"],
-                strategy=ValidationStrategy.SYNTAX
+                is_valid=False, errors=["Syntax error"], strategy=ValidationStrategy.SYNTAX
             )
         ]
 
@@ -206,11 +206,7 @@ class TestHealCode:
         healer = AutoHealer(mock_api_client, validator=mock_validator, config=config)
 
         with patch("pathlib.Path.write_text") as mock_write:
-            await healer.heal_code(
-                code="broken code",
-                language="python",
-                file_path="/tmp/test.py"
-            )
+            await healer.heal_code(code="broken code", language="python", file_path="/tmp/test.py")
             mock_write.assert_called_once()
 
     @pytest.mark.asyncio
@@ -222,15 +218,11 @@ class TestHealCode:
         # Multiple strategy failures
         mock_validator.validate.return_value = [
             ValidationResult(
-                is_valid=False,
-                errors=["Syntax error"],
-                strategy=ValidationStrategy.SYNTAX
+                is_valid=False, errors=["Syntax error"], strategy=ValidationStrategy.SYNTAX
             ),
             ValidationResult(
-                is_valid=False,
-                errors=["Type error"],
-                strategy=ValidationStrategy.TYPE_CHECK
-            )
+                is_valid=False, errors=["Type error"], strategy=ValidationStrategy.TYPE_CHECK
+            ),
         ]
 
         mock_response = MagicMock()
@@ -254,9 +246,7 @@ class TestHealCode:
 
         mock_validator.validate.return_value = [
             ValidationResult(
-                is_valid=False,
-                errors=["Syntax error"],
-                strategy=ValidationStrategy.SYNTAX
+                is_valid=False, errors=["Syntax error"], strategy=ValidationStrategy.SYNTAX
             )
         ]
 
@@ -284,15 +274,25 @@ class TestHealCode:
 
         mock_validator.validate.side_effect = [
             [
-                ValidationResult(is_valid=False, errors=initial_errors[:1], strategy=ValidationStrategy.SYNTAX),
-                ValidationResult(is_valid=False, errors=initial_errors[1:], strategy=ValidationStrategy.TYPE_CHECK),
-                ValidationResult(is_valid=False, errors=initial_errors[2:], strategy=ValidationStrategy.LINT),
+                ValidationResult(
+                    is_valid=False, errors=initial_errors[:1], strategy=ValidationStrategy.SYNTAX
+                ),
+                ValidationResult(
+                    is_valid=False,
+                    errors=initial_errors[1:],
+                    strategy=ValidationStrategy.TYPE_CHECK,
+                ),
+                ValidationResult(
+                    is_valid=False, errors=initial_errors[2:], strategy=ValidationStrategy.LINT
+                ),
             ],
             [
                 ValidationResult(is_valid=True, strategy=ValidationStrategy.SYNTAX),
-                ValidationResult(is_valid=False, errors=remaining_errors, strategy=ValidationStrategy.TYPE_CHECK),
+                ValidationResult(
+                    is_valid=False, errors=remaining_errors, strategy=ValidationStrategy.TYPE_CHECK
+                ),
                 ValidationResult(is_valid=True, strategy=ValidationStrategy.LINT),
-            ]
+            ],
         ]
 
         mock_response = MagicMock()
@@ -316,9 +316,7 @@ class TestHealCode:
 
         mock_validator.validate.return_value = [
             ValidationResult(
-                is_valid=False,
-                errors=["Syntax error"],
-                strategy=ValidationStrategy.SYNTAX
+                is_valid=False, errors=["Syntax error"], strategy=ValidationStrategy.SYNTAX
             )
         ]
 
@@ -328,7 +326,9 @@ class TestHealCode:
         mock_response.content = code
         mock_api_client.send_request.return_value = mock_response
 
-        healer = AutoHealer(mock_api_client, validator=mock_validator, config=HealingConfig(max_attempts=2))
+        healer = AutoHealer(
+            mock_api_client, validator=mock_validator, config=HealingConfig(max_attempts=2)
+        )
 
         result = await healer.heal_code(code, "python")
 
@@ -348,11 +348,9 @@ class TestHealFile:
 
         mock_validator.validate.return_value = [
             ValidationResult(
-                is_valid=False,
-                errors=["Syntax error"],
-                strategy=ValidationStrategy.SYNTAX
+                is_valid=False, errors=["Syntax error"], strategy=ValidationStrategy.SYNTAX
             ),
-            ValidationResult(is_valid=True, strategy=ValidationStrategy.SYNTAX)
+            ValidationResult(is_valid=True, strategy=ValidationStrategy.SYNTAX),
         ]
 
         mock_response = MagicMock()
@@ -361,7 +359,7 @@ class TestHealFile:
 
         healer = AutoHealer(mock_api_client, validator=mock_validator)
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write("broken code")
             temp_path = f.name
 
@@ -388,11 +386,9 @@ class TestHealFile:
 
         mock_validator.validate.return_value = [
             ValidationResult(
-                is_valid=False,
-                errors=["Syntax error"],
-                strategy=ValidationStrategy.SYNTAX
+                is_valid=False, errors=["Syntax error"], strategy=ValidationStrategy.SYNTAX
             ),
-            ValidationResult(is_valid=True, strategy=ValidationStrategy.SYNTAX)
+            ValidationResult(is_valid=True, strategy=ValidationStrategy.SYNTAX),
         ]
 
         mock_response = MagicMock()
@@ -401,7 +397,7 @@ class TestHealFile:
 
         healer = AutoHealer(mock_api_client, validator=mock_validator)
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write("broken code")
             temp_path = f.name
 
@@ -410,7 +406,7 @@ class TestHealFile:
             assert result.success is True
 
             # Check file was updated
-            with open(temp_path, 'r') as f:
+            with open(temp_path, "r") as f:
                 assert f.read() == "fixed code"
         finally:
             Path(temp_path).unlink(missing_ok=True)
@@ -427,7 +423,7 @@ class TestHealFile:
 
         healer = AutoHealer(mock_api_client, validator=mock_validator)
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".js", delete=False) as f:
             f.write("function test() {}")
             temp_path = f.name
 
@@ -436,8 +432,7 @@ class TestHealFile:
             assert result.success is True
             # Should detect JavaScript from .js extension
             mock_validator.validate.assert_called_with(
-                "function test() {}", "javascript",
-                healer.config.strategies, temp_path
+                "function test() {}", "javascript", healer.config.strategies, temp_path
             )
         finally:
             Path(temp_path).unlink(missing_ok=True)
@@ -456,7 +451,7 @@ class TestHelperMethods:
             errors="IndentationError: expected an indented block",
             warnings="Unused variable 'x'",
             context="This is a test function",
-            attempt_num=1
+            attempt_num=1,
         )
 
         assert "Fix the following python code" in prompt
@@ -636,20 +631,28 @@ def hello():
                 success=True,
                 original_code="code1",
                 final_code="fixed1",
-                attempts=[HealingAttempt(1, "code1", "fixed1", [], "", "", datetime.now().isoformat(), True)],
+                attempts=[
+                    HealingAttempt(
+                        1, "code1", "fixed1", [], "", "", datetime.now().isoformat(), True
+                    )
+                ],
                 total_time=1.5,
                 errors_fixed=["error1", "error2"],
-                errors_remaining=[]
+                errors_remaining=[],
             ),
             HealingResult(
                 success=False,
                 original_code="code2",
                 final_code="code2",
-                attempts=[HealingAttempt(1, "code2", "code2", [], "", "", datetime.now().isoformat(), False)],
+                attempts=[
+                    HealingAttempt(
+                        1, "code2", "code2", [], "", "", datetime.now().isoformat(), False
+                    )
+                ],
                 total_time=2.0,
                 errors_fixed=[],
-                errors_remaining=["error3"]
-            )
+                errors_remaining=["error3"],
+            ),
         ]
 
         stats = healer.get_healing_stats()
@@ -781,7 +784,9 @@ class TestEdgeCases:
         mock_response.content = "same broken code"
         mock_api_client.send_request.return_value = mock_response
 
-        healer = AutoHealer(mock_api_client, validator=mock_validator, config=HealingConfig(max_attempts=3))
+        healer = AutoHealer(
+            mock_api_client, validator=mock_validator, config=HealingConfig(max_attempts=3)
+        )
 
         initial_context = "Initial context"
         await healer.heal_code("broken", "python", context=initial_context)

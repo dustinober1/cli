@@ -13,7 +13,13 @@ from vibe_coder.types.config import AIProvider
 class MockCommand(SlashCommand):
     """Mock command for testing."""
 
-    def __init__(self, name: str, description: str = "Mock command for testing", response: str = "Mock response", **kwargs):
+    def __init__(
+        self,
+        name: str,
+        description: str = "Mock command for testing",
+        response: str = "Mock response",
+        **kwargs,
+    ):
         super().__init__(name, description, **kwargs)
         self.response = response
         self.execute_calls = []
@@ -117,7 +123,9 @@ class TestSlashCommandParser:
 
     async def test_parse_and_execute_success(self, parser, mock_context):
         """Test successful command execution."""
-        command = MockCommand("test", description="Test command description", response="success response")
+        command = MockCommand(
+            "test", description="Test command description", response="success response"
+        )
         parser.register_command(command)
 
         success, response = await parser.parse_and_execute("/test arg1", mock_context)
@@ -160,7 +168,9 @@ class TestSlashCommandParser:
 
     async def test_parse_and_execute_git_requirement_success(self, parser, mock_context):
         """Test command that requires Git repo when in one."""
-        command = MockCommand("git-test", description="Git command description", response="git success")
+        command = MockCommand(
+            "git-test", description="Git command description", response="git success"
+        )
         command.requires_git_repo = lambda: True
         parser.register_command(command)
 

@@ -2,9 +2,9 @@
 
 import json
 import os
-from pathlib import Path
-from typing import Dict, List, Optional, Any
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 
 class SnippetManager:
@@ -24,7 +24,7 @@ class SnippetManager:
         """Load snippet index from file."""
         if self.index_file.exists():
             try:
-                with open(self.index_file, 'r') as f:
+                with open(self.index_file, "r") as f:
                     return json.load(f)
             except Exception:
                 pass
@@ -35,13 +35,13 @@ class SnippetManager:
             "categories": {},
             "tags": {},
             "created_at": datetime.now().isoformat(),
-            "updated_at": datetime.now().isoformat()
+            "updated_at": datetime.now().isoformat(),
         }
 
     def _save_index(self):
         """Save snippet index to file."""
         self.index["updated_at"] = datetime.now().isoformat()
-        with open(self.index_file, 'w') as f:
+        with open(self.index_file, "w") as f:
             json.dump(self.index, f, indent=2)
 
     def save_snippet(
@@ -51,7 +51,7 @@ class SnippetManager:
         language: str,
         description: str = "",
         category: str = "general",
-        tags: Optional[List[str]] = None
+        tags: Optional[List[str]] = None,
     ) -> str:
         """Save a code snippet."""
         # Create snippet metadata
@@ -64,19 +64,16 @@ class SnippetManager:
             "tags": tags or [],
             "created_at": datetime.now().isoformat(),
             "updated_at": datetime.now().isoformat(),
-            "uses": 0
+            "uses": 0,
         }
 
         # Save code to file
         snippet_file = self.snippets_dir / f"{snippet_id}.{self._get_extension(language)}"
-        with open(snippet_file, 'w') as f:
+        with open(snippet_file, "w") as f:
             f.write(code)
 
         # Update index
-        self.index["snippets"][snippet_id] = {
-            **metadata,
-            "file": str(snippet_file)
-        }
+        self.index["snippets"][snippet_id] = {**metadata, "file": str(snippet_file)}
 
         # Update categories
         if category not in self.index["categories"]:
@@ -101,7 +98,7 @@ class SnippetManager:
         # Try to find by ID
         if identifier in self.index["snippets"]:
             snippet_data = self.index["snippets"][identifier].copy()
-            with open(snippet_data["file"], 'r') as f:
+            with open(snippet_data["file"], "r") as f:
                 snippet_data["code"] = f.read()
 
             # Increment uses
@@ -127,7 +124,7 @@ class SnippetManager:
         self,
         category: Optional[str] = None,
         language: Optional[str] = None,
-        tag: Optional[str] = None
+        tag: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """List snippets with optional filters."""
         snippets = []
@@ -141,16 +138,18 @@ class SnippetManager:
             if tag and tag not in data["tags"]:
                 continue
 
-            snippets.append({
-                "id": snippet_id,
-                "name": data["name"],
-                "language": data["language"],
-                "description": data["description"],
-                "category": data["category"],
-                "tags": data["tags"],
-                "created_at": data["created_at"],
-                "uses": data["uses"]
-            })
+            snippets.append(
+                {
+                    "id": snippet_id,
+                    "name": data["name"],
+                    "language": data["language"],
+                    "description": data["description"],
+                    "category": data["category"],
+                    "tags": data["tags"],
+                    "created_at": data["created_at"],
+                    "uses": data["uses"],
+                }
+            )
 
         # Sort by most used
         snippets.sort(key=lambda x: x["uses"], reverse=True)
@@ -163,18 +162,16 @@ class SnippetManager:
 
         for snippet_id, data in self.index["snippets"].items():
             # Search in name, description, and tags
-            searchable_text = " ".join([
-                data["name"],
-                data["description"],
-                " ".join(data["tags"])
-            ]).lower()
+            searchable_text = " ".join(
+                [data["name"], data["description"], " ".join(data["tags"])]
+            ).lower()
 
             if query_lower in searchable_text:
                 # Also search in code if needed
                 code_match = False
                 if query_lower not in searchable_text:
                     try:
-                        with open(data["file"], 'r') as f:
+                        with open(data["file"], "r") as f:
                             code_content = f.read().lower()
                             if query_lower in code_content:
                                 code_match = True
@@ -182,14 +179,16 @@ class SnippetManager:
                         pass
 
                 if code_match or query_lower in searchable_text:
-                    results.append({
-                        "id": snippet_id,
-                        "name": data["name"],
-                        "language": data["language"],
-                        "description": data["description"],
-                        "category": data["category"],
-                        "match_type": "code" if code_match else "metadata"
-                    })
+                    results.append(
+                        {
+                            "id": snippet_id,
+                            "name": data["name"],
+                            "language": data["language"],
+                            "description": data["description"],
+                            "category": data["category"],
+                            "match_type": "code" if code_match else "metadata",
+                        }
+                    )
 
         return results
 
@@ -256,18 +255,16 @@ class SnippetManager:
             category_counts[cat] = category_counts.get(cat, 0) + 1
 
         # Most popular snippets
-        popular = sorted(
-            self.index["snippets"].items(),
-            key=lambda x: x[1]["uses"],
-            reverse=True
-        )[:5]
+        popular = sorted(self.index["snippets"].items(), key=lambda x: x[1]["uses"], reverse=True)[
+            :5
+        ]
 
         return {
             "total_snippets": total_snippets,
             "total_uses": total_uses,
             "languages": language_counts,
             "categories": category_counts,
-            "most_popular": [{"name": data["name"], "uses": data["uses"]} for _, data in popular]
+            "most_popular": [{"name": data["name"], "uses": data["uses"]} for _, data in popular],
         }
 
     def _get_extension(self, language: str) -> str:
@@ -305,24 +302,17 @@ class SnippetManager:
 
     def export_snippets(self, file_path: str) -> str:
         """Export all snippets to a JSON file."""
-        export_data = {
-            "exported_at": datetime.now().isoformat(),
-            "version": "1.0",
-            "snippets": {}
-        }
+        export_data = {"exported_at": datetime.now().isoformat(), "version": "1.0", "snippets": {}}
 
         for snippet_id, data in self.index["snippets"].items():
             try:
-                with open(data["file"], 'r') as f:
+                with open(data["file"], "r") as f:
                     code = f.read()
-                export_data["snippets"][snippet_id] = {
-                    **data,
-                    "code": code
-                }
+                export_data["snippets"][snippet_id] = {**data, "code": code}
             except Exception:
                 continue
 
-        with open(file_path, 'w') as f:
+        with open(file_path, "w") as f:
             json.dump(export_data, f, indent=2)
 
         return f"Exported {len(export_data['snippets'])} snippets to {file_path}"
@@ -330,7 +320,7 @@ class SnippetManager:
     def import_snippets(self, file_path: str) -> str:
         """Import snippets from a JSON file."""
         try:
-            with open(file_path, 'r') as f:
+            with open(file_path, "r") as f:
                 import_data = json.load(f)
 
             count = 0
@@ -340,8 +330,10 @@ class SnippetManager:
                     continue
 
                 # Save code file
-                snippet_file = self.snippets_dir / f"{snippet_id}.{self._get_extension(data['language'])}"
-                with open(snippet_file, 'w') as f:
+                snippet_file = (
+                    self.snippets_dir / f"{snippet_id}.{self._get_extension(data['language'])}"
+                )
+                with open(snippet_file, "w") as f:
                     f.write(data["code"])
 
                 # Update index
@@ -354,7 +346,7 @@ class SnippetManager:
                     "created_at": data.get("created_at", datetime.now().isoformat()),
                     "updated_at": datetime.now().isoformat(),
                     "uses": 0,
-                    "file": str(snippet_file)
+                    "file": str(snippet_file),
                 }
 
                 count += 1

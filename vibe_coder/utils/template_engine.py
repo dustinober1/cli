@@ -1,16 +1,17 @@
 """Template engine for generating code from templates."""
 
-import os
 import json
-from pathlib import Path
-from typing import Dict, Any, Optional, List
-from string import Template
+import os
 from dataclasses import dataclass
+from pathlib import Path
+from string import Template
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
 class TemplateInfo:
     """Information about a template."""
+
     name: str
     description: str
     category: str
@@ -64,7 +65,7 @@ class TemplateEngine:
             category="python",
             language="python",
             variables=["class_name", "base_class", "methods"],
-            file_path=""
+            file_path="",
         )
 
         templates["python_function"] = TemplateInfo(
@@ -73,7 +74,7 @@ class TemplateEngine:
             category="python",
             language="python",
             variables=["function_name", "params", "return_type", "docstring"],
-            file_path=""
+            file_path="",
         )
 
         templates["python_async"] = TemplateInfo(
@@ -82,7 +83,7 @@ class TemplateEngine:
             category="python",
             language="python",
             variables=["function_name", "params", "return_type", "docstring"],
-            file_path=""
+            file_path="",
         )
 
         # JavaScript templates
@@ -92,7 +93,7 @@ class TemplateEngine:
             category="javascript",
             language="javascript",
             variables=["function_name", "params", "docstring"],
-            file_path=""
+            file_path="",
         )
 
         templates["js_class"] = TemplateInfo(
@@ -101,7 +102,7 @@ class TemplateEngine:
             category="javascript",
             language="javascript",
             variables=["class_name", "constructor_params", "methods"],
-            file_path=""
+            file_path="",
         )
 
         templates["react_component"] = TemplateInfo(
@@ -110,7 +111,7 @@ class TemplateEngine:
             category="react",
             language="javascript",
             variables=["component_name", "props", "hooks"],
-            file_path=""
+            file_path="",
         )
 
         # Web templates
@@ -120,7 +121,7 @@ class TemplateEngine:
             category="web",
             language="html",
             variables=["title", "meta_tags", "body_content"],
-            file_path=""
+            file_path="",
         )
 
         templates["css_class"] = TemplateInfo(
@@ -129,7 +130,7 @@ class TemplateEngine:
             category="web",
             language="css",
             variables=["class_name", "properties"],
-            file_path=""
+            file_path="",
         )
 
         # API templates
@@ -139,7 +140,7 @@ class TemplateEngine:
             category="api",
             language="python",
             variables=["endpoint_name", "method", "path", "request_model", "response_model"],
-            file_path=""
+            file_path="",
         )
 
         templates["api_client"] = TemplateInfo(
@@ -148,7 +149,7 @@ class TemplateEngine:
             category="api",
             language="python",
             variables=["service_name", "base_url", "methods"],
-            file_path=""
+            file_path="",
         )
 
         # Database templates
@@ -158,7 +159,7 @@ class TemplateEngine:
             category="database",
             language="sql",
             variables=["table_name", "columns", "constraints"],
-            file_path=""
+            file_path="",
         )
 
         templates["sql_query"] = TemplateInfo(
@@ -167,7 +168,7 @@ class TemplateEngine:
             category="database",
             language="sql",
             variables=["query_type", "table_name", "columns", "conditions"],
-            file_path=""
+            file_path="",
         )
 
         return templates
@@ -175,34 +176,34 @@ class TemplateEngine:
     def _parse_template_file(self, file_path: Path) -> Optional[TemplateInfo]:
         """Parse a template file and extract metadata."""
         try:
-            with open(file_path, 'r') as f:
+            with open(file_path, "r") as f:
                 content = f.read()
 
             # Extract metadata from comments at top of file
-            lines = content.split('\n')
+            lines = content.split("\n")
             metadata = {}
             template_start = 0
 
             for i, line in enumerate(lines):
-                if line.strip().startswith('#'):
-                    key_value = line.strip()[1:].strip().split(':', 1)
+                if line.strip().startswith("#"):
+                    key_value = line.strip()[1:].strip().split(":", 1)
                     if len(key_value) == 2:
                         metadata[key_value[0].strip().lower()] = key_value[1].strip()
                     template_start = i + 1
-                elif line.strip() and not line.strip().startswith('#'):
+                elif line.strip() and not line.strip().startswith("#"):
                     break
 
             # Extract template content
-            template_content = '\n'.join(lines[template_start:])
+            template_content = "\n".join(lines[template_start:])
 
             # Create template info
             template_info = TemplateInfo(
-                name=metadata.get('name', file_path.stem),
-                description=metadata.get('description', f'Template from {file_path.name}'),
-                category=metadata.get('category', 'custom'),
-                language=metadata.get('language', 'text'),
+                name=metadata.get("name", file_path.stem),
+                description=metadata.get("description", f"Template from {file_path.name}"),
+                category=metadata.get("category", "custom"),
+                language=metadata.get("language", "text"),
                 variables=self._extract_variables(template_content),
-                file_path=str(file_path)
+                file_path=str(file_path),
             )
 
             # Store template content
@@ -215,8 +216,9 @@ class TemplateEngine:
     def _extract_variables(self, template: str) -> List[str]:
         """Extract variables from template string."""
         import re
+
         # Find ${variable} patterns
-        variables = re.findall(r'\$\{([^}]+)\}', template)
+        variables = re.findall(r"\$\{([^}]+)\}", template)
         return list(set(variables))
 
     def render_template(self, template_name: str, variables: Dict[str, Any]) -> str:
@@ -227,7 +229,7 @@ class TemplateEngine:
         template_info = self.templates[template_name]
 
         # Get template content
-        if hasattr(template_info, 'content'):
+        if hasattr(template_info, "content"):
             template_content = template_info.content
         else:
             # Use built-in template
@@ -277,7 +279,7 @@ class TemplateEngine:
     """
     ${function_body}
 ''',
-            "js_function": '''/**
+            "js_function": """/**
  * ${docstring}
  * ${params_doc}
  * @returns {$return_type}
@@ -285,8 +287,8 @@ class TemplateEngine:
 function ${function_name}(${params}) {
     ${function_body}
 }
-''',
-            "js_class": '''class ${class_name} {
+""",
+            "js_class": """class ${class_name} {
     /**
      * Constructor for ${class_name}
      * @param {${constructor_params}}
@@ -297,8 +299,8 @@ function ${function_name}(${params}) {
 
     ${methods}
 }
-''',
-            "react_component": '''import React from 'react';
+""",
+            "react_component": """import React from 'react';
 
 /**
  * ${component_name} component
@@ -313,8 +315,8 @@ const ${component_name} = (${props}) => {
 };
 
 export default ${component_name};
-''',
-            "html_page": '''<!DOCTYPE html>
+""",
+            "html_page": """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -328,11 +330,11 @@ export default ${component_name};
     ${scripts}
 </body>
 </html>
-''',
-            "css_class": '''.${class_name} {
+""",
+            "css_class": """.${class_name} {
     ${properties}
 }
-''',
+""",
             "api_endpoint": '''@${method.lower()}("${path}")
 async def ${endpoint_name}(
     request: ${request_model},
@@ -356,21 +358,23 @@ async def ${endpoint_name}(
         """Close the client session."""
         await self.session.aclose()
 ''',
-            "sql_table": '''CREATE TABLE ${table_name} (
+            "sql_table": """CREATE TABLE ${table_name} (
     ${columns}
     ${constraints}
 );
-''',
-            "sql_query": '''${query_type} ${columns}
+""",
+            "sql_query": """${query_type} ${columns}
 FROM ${table_name}
 ${conditions}
 ${additional_clauses};
-'''
+""",
         }
 
         return builtin_contents.get(template_name, "")
 
-    def list_templates(self, category: Optional[str] = None, language: Optional[str] = None) -> List[TemplateInfo]:
+    def list_templates(
+        self, category: Optional[str] = None, language: Optional[str] = None
+    ) -> List[TemplateInfo]:
         """List available templates with optional filters."""
         templates = list(self.templates.values())
 
@@ -385,12 +389,7 @@ ${additional_clauses};
         return templates
 
     def create_template(
-        self,
-        name: str,
-        content: str,
-        description: str,
-        category: str,
-        language: str
+        self, name: str, content: str, description: str, category: str, language: str
     ) -> str:
         """Create a new template."""
         template_info = TemplateInfo(
@@ -399,7 +398,7 @@ ${additional_clauses};
             category=category,
             language=language,
             variables=self._extract_variables(content),
-            file_path=""
+            file_path="",
         )
 
         # Create template file
@@ -413,7 +412,7 @@ ${additional_clauses};
 
 {content}"""
 
-        with open(template_file, 'w') as f:
+        with open(template_file, "w") as f:
             f.write(file_content)
 
         # Add to templates
@@ -451,7 +450,7 @@ ${additional_clauses};
         template_info = self.templates[name]
 
         # Get template content
-        if hasattr(template_info, 'content'):
+        if hasattr(template_info, "content"):
             content = template_info.content
         else:
             content = self._get_builtin_template_content(name)
@@ -463,10 +462,10 @@ ${additional_clauses};
             "category": template_info.category,
             "language": template_info.language,
             "variables": template_info.variables,
-            "content": content
+            "content": content,
         }
 
-        with open(file_path, 'w') as f:
+        with open(file_path, "w") as f:
             json.dump(export_data, f, indent=2)
 
         return f"Template '{name}' exported to {file_path}"
@@ -474,7 +473,7 @@ ${additional_clauses};
     def import_template(self, file_path: str) -> str:
         """Import a template from a file."""
         try:
-            with open(file_path, 'r') as f:
+            with open(file_path, "r") as f:
                 data = json.load(f)
 
             # Validate required fields
@@ -489,7 +488,7 @@ ${additional_clauses};
                 content=data["content"],
                 description=data.get("description", ""),
                 category=data.get("category", "imported"),
-                language=data.get("language", "text")
+                language=data.get("language", "text"),
             )
 
         except Exception as e:
@@ -502,7 +501,7 @@ ${additional_clauses};
         variables = {}
 
         # Flatten schema for template substitution
-        def flatten_dict(d, parent_key=''):
+        def flatten_dict(d, parent_key=""):
             items = []
             for k, v in d.items():
                 new_key = f"{parent_key}_{k}" if parent_key else k

@@ -1,16 +1,16 @@
 """
 Test chat command functionality.
 """
-import asyncio
+
 import os
 import tempfile
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from rich.console import Console
 
 from vibe_coder.commands.chat import ChatCommand
-from vibe_coder.types.api import ApiMessage, MessageRole, ApiResponse, TokenUsage
+from vibe_coder.types.api import ApiMessage, ApiResponse, MessageRole, TokenUsage
 from vibe_coder.types.config import AIProvider
 
 # Set test environment variable
@@ -26,7 +26,7 @@ def mock_provider():
         endpoint="https://api.test.com/v1",
         model="test-model",
         temperature=0.7,
-        max_tokens=1000
+        max_tokens=1000,
     )
 
 
@@ -46,12 +46,8 @@ def mock_client():
     mock = AsyncMock()
     mock.send_request.return_value = ApiResponse(
         content="Test response",
-        usage=TokenUsage(
-            prompt_tokens=10,
-            completion_tokens=20,
-            total_tokens=30
-        ),
-        finish_reason="stop"
+        usage=TokenUsage(prompt_tokens=10, completion_tokens=20, total_tokens=30),
+        finish_reason="stop",
     )
     mock.close = AsyncMock()
     return mock
@@ -61,9 +57,11 @@ def mock_client():
 def chat_command():
     """Create a ChatCommand instance."""
     # Mock the repository intelligence components to avoid dependencies
-    with patch("vibe_coder.commands.chat.RepositoryMapper"), \
-         patch("vibe_coder.commands.chat.CodeContextProvider"), \
-         patch("vibe_coder.commands.chat.GitOperations") as mock_git:
+    with (
+        patch("vibe_coder.commands.chat.RepositoryMapper"),
+        patch("vibe_coder.commands.chat.CodeContextProvider"),
+        patch("vibe_coder.commands.chat.GitOperations") as mock_git,
+    ):
         mock_git.return_value.is_git_repo.return_value = False
 
         # Mock MCP manager to avoid connection errors
@@ -89,11 +87,13 @@ class TestChatCommandInitialization:
     @patch("vibe_coder.commands.chat.questionary")
     def test_chat_command_init_with_imports(self, mock_questionary):
         """Test ChatCommand with mocked imports."""
-        with patch("vibe_coder.commands.chat.RepositoryMapper"), \
-             patch("vibe_coder.commands.chat.CodeContextProvider"), \
-             patch("vibe_coder.commands.chat.GitOperations") as mock_git, \
-             patch("vibe_coder.commands.chat.command_registry") as mock_registry, \
-             patch("vibe_coder.commands.chat.MCPManager"):
+        with (
+            patch("vibe_coder.commands.chat.RepositoryMapper"),
+            patch("vibe_coder.commands.chat.CodeContextProvider"),
+            patch("vibe_coder.commands.chat.GitOperations") as mock_git,
+            patch("vibe_coder.commands.chat.command_registry") as mock_registry,
+            patch("vibe_coder.commands.chat.MCPManager"),
+        ):
 
             mock_git.return_value.is_git_repo.return_value = True
             mock_git.return_value.get_git_info.return_value = {"branch": "main"}
@@ -105,11 +105,13 @@ class TestChatCommandInitialization:
 
     def test_chat_command_init_slash_command_error(self):
         """Test ChatCommand initialization with slash command error."""
-        with patch("vibe_coder.commands.chat.RepositoryMapper"), \
-             patch("vibe_coder.commands.chat.CodeContextProvider"), \
-             patch("vibe_coder.commands.chat.GitOperations") as mock_git, \
-             patch("vibe_coder.commands.chat.command_registry") as mock_registry, \
-             patch("vibe_coder.commands.chat.MCPManager"):
+        with (
+            patch("vibe_coder.commands.chat.RepositoryMapper"),
+            patch("vibe_coder.commands.chat.CodeContextProvider"),
+            patch("vibe_coder.commands.chat.GitOperations") as mock_git,
+            patch("vibe_coder.commands.chat.command_registry") as mock_registry,
+            patch("vibe_coder.commands.chat.MCPManager"),
+        ):
 
             mock_git.return_value.is_git_repo.side_effect = Exception("Git error")
             mock_registry.get_parser.side_effect = Exception("Registry error")
@@ -131,10 +133,7 @@ class TestChatCommandProviderSetup:
         mock_factory.create_client.return_value = mock_client
 
         result = await chat_command._setup_provider(
-            provider_name=None,
-            model=None,
-            temperature=None,
-            max_tokens=None
+            provider_name=None, model=None, temperature=None, max_tokens=None
         )
 
         assert result is True
@@ -152,10 +151,7 @@ class TestChatCommandProviderSetup:
         mock_factory.create_client.return_value = mock_client
 
         result = await chat_command._setup_provider(
-            provider_name="override-provider",
-            model="gpt-4",
-            temperature=0.5,
-            max_tokens=2000
+            provider_name="override-provider", model="gpt-4", temperature=0.5, max_tokens=2000
         )
 
         assert result is True
@@ -170,10 +166,7 @@ class TestChatCommandProviderSetup:
         mock_config.get_current_provider.return_value = None
 
         result = await chat_command._setup_provider(
-            provider_name=None,
-            model=None,
-            temperature=None,
-            max_tokens=None
+            provider_name=None, model=None, temperature=None, max_tokens=None
         )
 
         assert result is False
@@ -189,18 +182,13 @@ class TestChatCommandProviderSetup:
         mock_questionary.select.return_value.ask.return_value = "setup"
 
         result = await chat_command._setup_provider(
-            provider_name=None,
-            model=None,
-            temperature=None,
-            max_tokens=None
+            provider_name=None, model=None, temperature=None, max_tokens=None
         )
 
         assert result is False
 
     @patch("vibe_coder.commands.chat.config_manager")
-    async def test_setup_provider_creation_error(
-        self, mock_config, chat_command, mock_provider
-    ):
+    async def test_setup_provider_creation_error(self, mock_config, chat_command, mock_provider):
         """Test provider setup when client creation fails."""
         mock_config.get_current_provider.return_value = mock_provider
 
@@ -208,10 +196,7 @@ class TestChatCommandProviderSetup:
             mock_factory.create_client.side_effect = Exception("Client creation failed")
 
             result = await chat_command._setup_provider(
-                provider_name=None,
-                model=None,
-                temperature=None,
-                max_tokens=None
+                provider_name=None, model=None, temperature=None, max_tokens=None
             )
 
             assert result is False
@@ -257,7 +242,7 @@ class TestChatCommandMessageHandling:
         """Test clearing message history."""
         chat_command.messages = [
             ApiMessage(role=MessageRole.USER, content="Hello"),
-            ApiMessage(role=MessageRole.ASSISTANT, content="Hi!")
+            ApiMessage(role=MessageRole.ASSISTANT, content="Hi!"),
         ]
 
         chat_command._clear_messages()
@@ -267,7 +252,7 @@ class TestChatCommandMessageHandling:
         """Test getting message history."""
         messages = [
             ApiMessage(role=MessageRole.USER, content="Hello"),
-            ApiMessage(role=MessageRole.ASSISTANT, content="Hi!")
+            ApiMessage(role=MessageRole.ASSISTANT, content="Hi!"),
         ]
         chat_command.messages = messages
 
@@ -279,9 +264,7 @@ class TestChatCommandChatLoop:
     """Test chat loop functionality."""
 
     @patch("vibe_coder.commands.chat.questionary")
-    async def test_chat_loop_normal_message(
-        self, mock_questionary, chat_command, mock_client
-    ):
+    async def test_chat_loop_normal_message(self, mock_questionary, chat_command, mock_client):
         """Test chat loop with normal message."""
         chat_command.client = mock_client
 
@@ -302,9 +285,7 @@ class TestChatCommandChatLoop:
                 mock_handle.assert_called_once()
 
     @patch("vibe_coder.commands.chat.questionary")
-    async def test_chat_loop_with_slash_command(
-        self, mock_questionary, chat_command
-    ):
+    async def test_chat_loop_with_slash_command(self, mock_questionary, chat_command):
         """Test chat loop with slash command."""
         chat_command.slash_parser = MagicMock()
         chat_command.slash_parser.is_slash_command.return_value = True
@@ -326,9 +307,7 @@ class TestChatCommandChatLoop:
             chat_command.slash_parser.parse_and_execute.assert_called_once()
 
     @patch("vibe_coder.commands.chat.questionary")
-    async def test_chat_loop_exit_commands(
-        self, mock_questionary, chat_command
-    ):
+    async def test_chat_loop_exit_commands(self, mock_questionary, chat_command):
         """Test chat loop with exit commands."""
         test_cases = ["/exit", "/quit", "exit"]
 
@@ -342,20 +321,15 @@ class TestChatCommandChatLoop:
                 assert len(chat_command.messages) == 0
 
     @patch("vibe_coder.commands.chat.questionary")
-    async def test_chat_loop_clear_command(
-        self, mock_questionary, chat_command
-    ):
+    async def test_chat_loop_clear_command(self, mock_questionary, chat_command):
         """Test chat loop with clear command."""
         # Add some messages first
         chat_command.messages = [
             ApiMessage(role=MessageRole.USER, content="Hello"),
-            ApiMessage(role=MessageRole.ASSISTANT, content="Hi!")
+            ApiMessage(role=MessageRole.ASSISTANT, content="Hi!"),
         ]
 
-        mock_questionary.text.return_value.ask.side_effect = [
-            "/clear",
-            "/exit"
-        ]
+        mock_questionary.text.return_value.ask.side_effect = ["/clear", "/exit"]
 
         with patch.object(chat_command.console, "print") as mock_print:
             await chat_command._chat_loop()
@@ -364,14 +338,9 @@ class TestChatCommandChatLoop:
             mock_print.assert_any_call("[yellow]Conversation history cleared.[/yellow]")
 
     @patch("vibe_coder.commands.chat.questionary")
-    async def test_chat_loop_empty_input(
-        self, mock_questionary, chat_command
-    ):
+    async def test_chat_loop_empty_input(self, mock_questionary, chat_command):
         """Test chat loop with empty input."""
-        mock_questionary.text.return_value.ask.side_effect = [
-            "",  # Empty input
-            "/exit"
-        ]
+        mock_questionary.text.return_value.ask.side_effect = ["", "/exit"]  # Empty input
 
         with patch.object(chat_command.console, "print"):
             await chat_command._chat_loop()
@@ -379,9 +348,7 @@ class TestChatCommandChatLoop:
             assert len(chat_command.messages) == 0
 
     @patch("vibe_coder.commands.chat.questionary")
-    async def test_chat_loop_keyboard_interrupt(
-        self, mock_questionary, chat_command
-    ):
+    async def test_chat_loop_keyboard_interrupt(self, mock_questionary, chat_command):
         """Test chat loop with keyboard interrupt."""
         mock_questionary.text.return_value.ask.side_effect = KeyboardInterrupt()
 
@@ -406,9 +373,7 @@ class TestChatCommandAIResponse:
         assert chat_command.messages[1].role == MessageRole.ASSISTANT
         assert chat_command.messages[1].content == "Test response"
 
-    async def test_handle_ai_response_with_context(
-        self, chat_command, mock_client
-    ):
+    async def test_handle_ai_response_with_context(self, chat_command, mock_client):
         """Test handling AI response with context injection."""
         chat_command.client = mock_client
         chat_command.repo_mapper = MagicMock()
@@ -417,7 +382,7 @@ class TestChatCommandAIResponse:
         # Mock context retrieval
         chat_command.context_provider.get_code_context.return_value = {
             "file_path": "test.py",
-            "content": "def test(): pass"
+            "content": "def test(): pass",
         }
 
         user_message = ApiMessage(role=MessageRole.USER, content="Fix this code")
@@ -480,7 +445,7 @@ class TestChatCommandSlashCommands:
         """Test /history slash command."""
         chat_command.messages = [
             ApiMessage(role=MessageRole.USER, content="Hello"),
-            ApiMessage(role=MessageRole.ASSISTANT, content="Hi!")
+            ApiMessage(role=MessageRole.ASSISTANT, content="Hi!"),
         ]
 
         with patch.object(chat_command.console, "print") as mock_print:
@@ -501,10 +466,10 @@ class TestChatCommandSlashCommands:
         """Test /save slash command."""
         chat_command.messages = [
             ApiMessage(role=MessageRole.USER, content="Hello"),
-            ApiMessage(role=MessageRole.ASSISTANT, content="Hi!")
+            ApiMessage(role=MessageRole.ASSISTANT, content="Hi!"),
         ]
 
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix=".json") as f:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as f:
             temp_file = f.name
 
         try:
@@ -531,8 +496,10 @@ class TestChatCommandRun:
         """Test successful chat run."""
         mock_config.get_current_provider.return_value = mock_provider
 
-        with patch.object(chat_command, "_setup_provider", new_callable=AsyncMock) as mock_setup, \
-             patch.object(chat_command, "_chat_loop", new_callable=AsyncMock) as mock_chat_loop:
+        with (
+            patch.object(chat_command, "_setup_provider", new_callable=AsyncMock) as mock_setup,
+            patch.object(chat_command, "_chat_loop", new_callable=AsyncMock) as mock_chat_loop,
+        ):
 
             mock_setup.return_value = True
 
@@ -577,15 +544,15 @@ class TestChatCommandIntegration:
     async def test_full_chat_flow_with_mock_api(self, chat_command):
         """Test full chat flow with mocked API."""
         # This is an integration test that tests multiple components together
-        with patch("vibe_coder.commands.chat.config_manager") as mock_config, \
-             patch("vibe_coder.commands.chat.ClientFactory") as mock_factory, \
-             patch("vibe_coder.commands.chat.questionary") as mock_questionary:
+        with (
+            patch("vibe_coder.commands.chat.config_manager") as mock_config,
+            patch("vibe_coder.commands.chat.ClientFactory") as mock_factory,
+            patch("vibe_coder.commands.chat.questionary") as mock_questionary,
+        ):
 
             # Setup mocks
             mock_provider = AIProvider(
-                name="test",
-                api_key="test-key",
-                endpoint="https://api.test.com/v1"
+                name="test", api_key="test-key", endpoint="https://api.test.com/v1"
             )
             mock_config.get_current_provider.return_value = mock_provider
 
@@ -593,14 +560,14 @@ class TestChatCommandIntegration:
             mock_client.send_request.return_value = ApiResponse(
                 content="Integration test response",
                 usage=TokenUsage(prompt_tokens=5, completion_tokens=10, total_tokens=15),
-                finish_reason="stop"
+                finish_reason="stop",
             )
             mock_factory.create_client.return_value = mock_client
 
             # Mock user interaction
             mock_questionary.text.return_value.ask.side_effect = [
                 "Hello from integration test",
-                "/exit"
+                "/exit",
             ]
 
             # Run the chat
@@ -617,17 +584,17 @@ class TestChatCommandIntegration:
 
             # Create a test file
             test_file = os.path.join(temp_dir, "test.py")
-            with open(test_file, 'w') as f:
+            with open(test_file, "w") as f:
                 f.write("def hello():\n    print('Hello, World!')")
 
             # Initialize repository mapper and context provider
-            with patch("vibe_coder.commands.chat.config_manager") as mock_config, \
-                 patch("vibe_coder.commands.chat.ClientFactory") as mock_factory:
+            with (
+                patch("vibe_coder.commands.chat.config_manager") as mock_config,
+                patch("vibe_coder.commands.chat.ClientFactory") as mock_factory,
+            ):
 
                 mock_provider = AIProvider(
-                    name="test",
-                    api_key="test-key",
-                    endpoint="https://api.test.com/v1"
+                    name="test", api_key="test-key", endpoint="https://api.test.com/v1"
                 )
                 mock_config.get_current_provider.return_value = mock_provider
 
@@ -635,13 +602,13 @@ class TestChatCommandIntegration:
                 mock_client.send_request.return_value = ApiResponse(
                     content="I see the hello function",
                     usage=TokenUsage(prompt_tokens=10, completion_tokens=10, total_tokens=20),
-                    finish_reason="stop"
+                    finish_reason="stop",
                 )
                 mock_factory.create_client.return_value = mock_client
 
                 # Setup repository components
-                from vibe_coder.intelligence.repo_mapper import RepositoryMapper
                 from vibe_coder.intelligence.code_context import CodeContextProvider
+                from vibe_coder.intelligence.repo_mapper import RepositoryMapper
 
                 chat_command.repo_mapper = RepositoryMapper()
                 chat_command.context_provider = CodeContextProvider()
@@ -660,7 +627,11 @@ class TestChatCommandIntegration:
                 mock_client.send_request.assert_called_once()
                 call_args = mock_client.send_request.call_args[0][0]
                 # Should contain file context
-                assert any("def hello" in msg.content for msg in call_args if msg.role == MessageRole.SYSTEM)
+                assert any(
+                    "def hello" in msg.content
+                    for msg in call_args
+                    if msg.role == MessageRole.SYSTEM
+                )
 
     @pytest.mark.integration
     @pytest.mark.slow
@@ -678,15 +649,15 @@ class TestChatCommandIntegration:
                 name="openai-test",
                 api_key=os.getenv("OPENAI_API_KEY"),
                 endpoint="https://api.openai.com/v1",
-                model="gpt-3.5-turbo"
+                model="gpt-3.5-turbo",
             )
         )
 
         try:
             # Test actual API call
-            response = await client.send_request([
-                ApiMessage(role=MessageRole.USER, content="Say 'API test successful'")
-            ])
+            response = await client.send_request(
+                [ApiMessage(role=MessageRole.USER, content="Say 'API test successful'")]
+            )
 
             assert "API test successful" in response.content
             assert response.usage.total_tokens > 0
@@ -709,10 +680,7 @@ class TestChatCommandIntegration:
             chat_command.slash_parser = MagicMock()
 
             with patch("vibe_coder.commands.chat.questionary") as mock_questionary:
-                mock_questionary.text.return_value.ask.side_effect = [
-                    "/mcp list",
-                    "/exit"
-                ]
+                mock_questionary.text.return_value.ask.side_effect = ["/mcp list", "/exit"]
 
                 with patch.object(chat_command.console, "print"):
                     await chat_command._chat_loop()
@@ -729,25 +697,274 @@ class TestChatCommandIntegration:
 
             # Init git repo
             import subprocess
+
             subprocess.run(["git", "init"], check=True, capture_output=True)
             subprocess.run(["git", "config", "user.email", "test@example.com"], check=True)
             subprocess.run(["git", "config", "user.name", "Test User"], check=True)
 
             # Create and commit a file
             test_file = os.path.join(temp_dir, "test.py")
-            with open(test_file, 'w') as f:
+            with open(test_file, "w") as f:
                 f.write("print('Hello')")
 
             subprocess.run(["git", "add", "test.py"], check=True)
             subprocess.run(["git", "commit", "-m", "Initial commit"], check=True)
 
             # Test git info is captured
-            with patch("vibe_coder.commands.chat.config_manager"), \
-                 patch("vibe_coder.commands.chat.ClientFactory"):
+            with (
+                patch("vibe_coder.commands.chat.config_manager"),
+                patch("vibe_coder.commands.chat.ClientFactory"),
+            ):
 
                 # Re-initialize to capture git info
                 chat_command = ChatCommand()
 
                 assert chat_command.git_info is not None
                 assert "branch" in chat_command.git_info
-                assert chat_command.git_info["branch"] == "main" or chat_command.git_info["branch"] == "master"
+                assert (
+                    chat_command.git_info["branch"] == "main"
+                    or chat_command.git_info["branch"] == "master"
+                )
+
+
+class TestChatCommandRunExtended:
+    """Test the main run() method to improve coverage."""
+
+    @patch("vibe_coder.commands.chat.config_manager")
+    @patch("vibe_coder.commands.chat.ClientFactory")
+    @patch("vibe_coder.commands.chat.questionary")
+    async def test_run_success(
+        self, mock_questionary, mock_factory, mock_config, chat_command, mock_provider, mock_client
+    ):
+        """Test successful run execution."""
+        # Setup mocks
+        mock_config.get_current_provider.return_value = mock_provider
+        mock_factory.create_client.return_value = mock_client
+
+        # Mock user input and exit
+        mock_questionary.text.return_value.ask.return_value = "/exit"
+
+        # Run the chat command
+        result = await chat_command.run(provider_name=None, model=None, temperature=None)
+
+        assert result is True
+
+    @patch("vibe_coder.commands.chat.config_manager")
+    @patch("vibe_coder.commands.chat.questionary")
+    async def test_run_no_provider(self, mock_questionary, mock_config, chat_command):
+        """Test run with no provider configured."""
+        mock_config.get_current_provider.return_value = None
+        mock_config.list_providers.return_value = {}
+
+        # Mock user choosing to exit
+        mock_questionary.select.return_value.ask.return_value = "exit"
+
+        result = await chat_command.run(provider_name=None, model=None, temperature=None)
+
+        assert result is False
+
+    @patch("vibe_coder.commands.chat.config_manager")
+    @patch("vibe_coder.commands.chat.ClientFactory")
+    @patch("vibe_coder.commands.chat.questionary")
+    async def test_run_with_provider_override(
+        self, mock_questionary, mock_factory, mock_config, chat_command, mock_provider, mock_client
+    ):
+        """Test run with provider name override."""
+        mock_config.get_provider.return_value = mock_provider
+        mock_factory.create_client.return_value = mock_client
+        mock_questionary.text.return_value.ask.return_value = "/exit"
+
+        result = await chat_command.run(provider_name="test-provider", model=None, temperature=None)
+
+        assert result is True
+        mock_config.get_provider.assert_called_with("test-provider")
+
+    @patch("vibe_coder.commands.chat.config_manager")
+    @patch("vibe_coder.commands.chat.questionary")
+    async def test_run_with_parameter_overrides(
+        self, mock_questionary, mock_config, chat_command, mock_provider
+    ):
+        """Test run with parameter overrides."""
+        mock_config.get_provider.return_value = mock_provider
+        mock_questionary.text.return_value.ask.return_value = "/exit"
+
+        with patch("vibe_coder.commands.chat.ClientFactory") as mock_factory:
+            mock_client = AsyncMock()
+            mock_factory.create_client.return_value = mock_client
+
+            result = await chat_command.run(
+                provider_name="test-provider", model="gpt-4", temperature=0.5, max_tokens=2000
+            )
+
+            assert result is True
+            # Check that overrides were applied
+            assert mock_provider.model == "gpt-4"
+            assert mock_provider.temperature == 0.5
+            assert mock_provider.max_tokens == 2000
+
+    @patch("vibe_coder.commands.chat.config_manager")
+    @patch("vibe_coder.commands.chat.ClientFactory")
+    @patch("vibe_coder.commands.chat.questionary")
+    async def test_run_keyboard_interrupt(
+        self, mock_questionary, mock_factory, mock_config, chat_command, mock_provider, mock_client
+    ):
+        """Test run handling keyboard interrupt."""
+        mock_config.get_current_provider.return_value = mock_provider
+        mock_factory.create_client.return_value = mock_client
+
+        # Mock KeyboardInterrupt during user input
+        mock_questionary.text.return_value.ask.side_effect = KeyboardInterrupt()
+
+        result = await chat_command.run(provider_name=None, model=None, temperature=None)
+
+        assert result is False
+
+    @patch("vibe_coder.commands.chat.config_manager")
+    @patch("vibe_coder.commands.chat.questionary")
+    async def test_run_with_exception(
+        self, mock_questionary, mock_config, chat_command, mock_provider
+    ):
+        """Test run with general exception."""
+        mock_config.get_current_provider.return_value = mock_provider
+
+        with patch("vibe_coder.commands.chat.ClientFactory") as mock_factory:
+            mock_factory.create_client.side_effect = Exception("Setup failed")
+
+            result = await chat_command.run(provider_name=None, model=None, temperature=None)
+
+            assert result is False
+
+    @patch("vibe_coder.commands.chat.config_manager")
+    @patch("vibe_coder.commands.chat.ClientFactory")
+    @patch("vibe_coder.commands.chat.questionary")
+    async def test_run_with_chat_exception(
+        self, mock_questionary, mock_factory, mock_config, chat_command, mock_provider, mock_client
+    ):
+        """Test run with exception in chat loop."""
+        mock_config.get_current_provider.return_value = mock_provider
+        mock_factory.create_client.return_value = mock_client
+
+        # Mock exception in chat loop
+        mock_questionary.text.return_value.ask.side_effect = Exception("Chat error")
+
+        with patch.object(chat_command, "_chat_loop", side_effect=Exception("Chat error")):
+            result = await chat_command.run(provider_name=None, model=None, temperature=None)
+
+            assert result is False
+
+    @patch("vibe_coder.commands.chat.config_manager")
+    @patch("vibe_coder.commands.chat.ClientFactory")
+    @patch("vibe_coder.commands.chat.questionary")
+    async def test_run_cleanup(
+        self, mock_questionary, mock_factory, mock_config, chat_command, mock_provider, mock_client
+    ):
+        """Test that resources are cleaned up after run."""
+        mock_config.get_current_provider.return_value = mock_provider
+        mock_factory.create_client.return_value = mock_client
+        mock_questionary.text.return_value.ask.return_value = "/exit"
+
+        result = await chat_command.run(provider_name=None, model=None, temperature=None)
+
+        assert result is True
+        # Verify client was closed
+        mock_client.close.assert_called_once()
+        # Verify MCP manager was closed
+        chat_command.mcp_manager.close.assert_called_once()
+
+
+class TestChatCommandMessageIntentAnalysis:
+    """Test message intent analysis methods."""
+
+    def test_analyze_message_intent_code_generation(self, chat_command):
+        """Test analyzing code generation intent."""
+        message = "Write a function to calculate fibonacci"
+        from vibe_coder.intelligence.code_context import OperationType
+
+        intent = chat_command._analyze_message_intent(message)
+        assert intent == OperationType.GENERATE
+
+    def test_analyze_message_intent_debugging(self, chat_command):
+        """Test analyzing debugging intent."""
+        message = "Help debug this error in my code"
+        from vibe_coder.intelligence.code_context import OperationType
+
+        intent = chat_command._analyze_message_intent(message)
+        assert intent == OperationType.DEBUG
+
+    def test_analyze_message_intent_explanation(self, chat_command):
+        """Test analyzing explanation intent."""
+        message = "Explain how this algorithm works"
+        from vibe_coder.intelligence.code_context import OperationType
+
+        intent = chat_command._analyze_message_intent(message)
+        assert intent == OperationType.EXPLAIN
+
+    def test_analyze_message_intent_unknown(self, chat_command):
+        """Test analyzing unknown intent."""
+        message = "Hello there"
+        from vibe_coder.intelligence.code_context import OperationType
+
+        intent = chat_command._analyze_message_intent(message)
+        assert intent == OperationType.EDIT
+
+    def test_extract_target_file(self, chat_command):
+        """Test extracting target file from message."""
+        message = "Fix the bug in src/main.py"
+
+        target = chat_command._extract_target_file(message)
+        assert target == "src/main.py"
+
+    def test_extract_target_file_none(self, chat_command):
+        """Test extracting target file when none exists."""
+        message = "Write a new function"
+
+        target = chat_command._extract_target_file(message)
+        assert target is None
+
+
+class TestChatCommandContextInjection:
+    """Test context injection functionality."""
+
+    @patch("vibe_coder.commands.chat.config_manager")
+    async def test_inject_context_with_repo_info(self, mock_config, chat_command):
+        """Test injecting context with repository information."""
+        # Mock repository components
+        chat_command.repo_mapper = MagicMock()
+        chat_command.context_provider = MagicMock()
+
+        # Mock context response
+        mock_context = ApiMessage(
+            role=MessageRole.SYSTEM, content="Context: Working on a Python project with main.py"
+        )
+        chat_command.context_provider.get_context.return_value = mock_context
+
+        user_message = "Update the main function"
+        result = await chat_command._inject_context(user_message)
+
+        assert result is not None
+        assert result.role == MessageRole.SYSTEM
+        assert "Context:" in result.content
+
+    @patch("vibe_coder.commands.chat.config_manager")
+    async def test_inject_context_no_provider(self, mock_config, chat_command):
+        """Test injecting context when no provider is set."""
+        mock_config.get_current_provider.return_value = None
+
+        user_message = "Write a function"
+        result = await chat_command._inject_context(user_message)
+
+        assert result is None
+
+    @patch("vibe_coder.commands.chat.config_manager")
+    async def test_inject_context_no_repo_components(
+        self, mock_config, chat_command, mock_provider
+    ):
+        """Test injecting context without repository components."""
+        mock_config.get_current_provider.return_value = mock_provider
+        chat_command.repo_mapper = None
+        chat_command.context_provider = None
+
+        user_message = "Write a function"
+        result = await chat_command._inject_context(user_message)
+
+        assert result is None

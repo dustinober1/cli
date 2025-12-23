@@ -101,7 +101,7 @@ class GitCommitCommand(SlashCommand):
             generated_message = await git_ops.generate_commit_message(diff)
             return (
                 f"Generated commit message: {generated_message}\n"
-                f'Use \'/git-commit "{generated_message}"\' to commit.'
+                f"Use '/git-commit \"{generated_message}\"' to commit."
             )
 
 

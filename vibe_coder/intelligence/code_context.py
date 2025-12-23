@@ -8,13 +8,14 @@ code generation, fixing, and refactoring operations.
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 if TYPE_CHECKING:
     from vibe_coder.analytics.token_counter import TokenCounter
     from vibe_coder.intelligence.repo_mapper import RepositoryMapper
 
-from vibe_coder.intelligence.token_budgeter import TokenBudgeter, ContextRequest as BudgetRequest
+from vibe_coder.intelligence.token_budgeter import ContextRequest as BudgetRequest
+from vibe_coder.intelligence.token_budgeter import TokenBudgeter
 from vibe_coder.intelligence.types import ContextItem, FileNode
 
 

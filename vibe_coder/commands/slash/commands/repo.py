@@ -8,9 +8,9 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from vibe_coder.commands.slash.base import SlashCommand, CommandContext
-from vibe_coder.intelligence.repo_mapper import RepositoryMapper
+from vibe_coder.commands.slash.base import CommandContext, SlashCommand
 from vibe_coder.intelligence.importance_scorer import ImportanceScorer
+from vibe_coder.intelligence.repo_mapper import RepositoryMapper
 
 
 class ScanCommand(SlashCommand):
@@ -21,7 +21,7 @@ class ScanCommand(SlashCommand):
             name="scan",
             description="Scan repository for intelligent context analysis",
             aliases=["sc"],
-            category="repository"
+            category="repository",
         )
 
     async def execute(self, args: List[str], context: CommandContext) -> str:
@@ -64,7 +64,9 @@ class ScanCommand(SlashCommand):
                 if stats["languages"]:
                     table.add_row("", "")  # Separator
                     table.add_row("Languages", "")
-                    for lang, count in sorted(stats["languages"].items(), key=lambda x: x[1], reverse=True):
+                    for lang, count in sorted(
+                        stats["languages"].items(), key=lambda x: x[1], reverse=True
+                    ):
                         table.add_row(f"  {lang}", str(count))
 
                 # Render table
@@ -100,7 +102,9 @@ class ContextCommand(SlashCommand):
                 context = ctx.chat_command.repo_mapper.get_context_for_file(file)
             else:
                 # Get compressed representation
-                context = await ctx.chat_command.repo_mapper.compress_with_importance(max_tokens=4000)
+                context = await ctx.chat_command.repo_mapper.compress_with_importance(
+                    max_tokens=4000
+                )
 
             # Display context
             console = Console()
@@ -210,7 +214,7 @@ class ImportanceCommand(SlashCommand):
                     top_factors = sorted(
                         [(k, v) for k, v in factors.items() if v > 0.1],
                         key=lambda x: x[1],
-                        reverse=True
+                        reverse=True,
                     )[:2]
                     factors_str = ", ".join([f"{k}: {v:.2f}" for k, v in top_factors])
                 else:

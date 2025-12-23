@@ -4,9 +4,10 @@ import json
 from pathlib import Path
 from typing import List, Optional
 
+from vibe_coder.utils.snippet_manager import SnippetManager
+
 from ..base import CommandContext, SlashCommand
 from ..file_ops import FileOperations
-from vibe_coder.utils.snippet_manager import SnippetManager
 
 
 class SnippetCommand(SlashCommand):
@@ -60,7 +61,9 @@ Examples:
         else:
             return f"Unknown action: {action}. Use /snippet to see available actions."
 
-    async def _save_snippet(self, snippet_manager: SnippetManager, args: List[str], context: CommandContext) -> str:
+    async def _save_snippet(
+        self, snippet_manager: SnippetManager, args: List[str], context: CommandContext
+    ) -> str:
         """Save a code snippet."""
         if len(args) < 2:
             return "Usage: /snippet save <name> <language> [description]"
@@ -76,7 +79,11 @@ Examples:
 
         # Try to find a file to save as snippet
         code_files = list(Path(context.working_directory).glob("*"))
-        code_files = [f for f in code_files if f.suffix in ['.py', '.js', '.ts', '.java', '.cpp', '.c', '.go', '.rs']]
+        code_files = [
+            f
+            for f in code_files
+            if f.suffix in [".py", ".js", ".ts", ".java", ".cpp", ".c", ".go", ".rs"]
+        ]
 
         if not code_files:
             return "No code file found. Please specify a file or have code in current directory."
@@ -98,7 +105,7 @@ Examples:
             language=language,
             description=description,
             category=category,
-            tags=tags
+            tags=tags,
         )
 
         return f"{result}\n\n📝 File saved: {code_file.name}\n🏷️  Category: {category}\n📌 Tags: {', '.join(tags) if tags else 'None'}"
@@ -189,7 +196,9 @@ Examples:
 
         return list(set(tags))  # Remove duplicates
 
-    async def _get_snippet(self, snippet_manager: SnippetManager, args: List[str], context: CommandContext) -> str:
+    async def _get_snippet(
+        self, snippet_manager: SnippetManager, args: List[str], context: CommandContext
+    ) -> str:
         """Get a snippet by name."""
         if not args:
             return "Usage: /snippet get <name>"
@@ -201,8 +210,9 @@ Examples:
             # Try search as fallback
             results = snippet_manager.search_snippets(name)
             if results:
-                return f"Snippet '{name}' not found. Did you mean:\n" + \
-                       "\n".join([f"  • {r['name']} ({r['language']})" for r in results[:5]])
+                return f"Snippet '{name}' not found. Did you mean:\n" + "\n".join(
+                    [f"  • {r['name']} ({r['language']})" for r in results[:5]]
+                )
             return f"Snippet '{name}' not found"
 
         if isinstance(snippet, dict) and snippet.get("type") == "tag_list":
@@ -216,13 +226,15 @@ Examples:
         output.append(f"📌 Tags: {', '.join(snippet['tags']) if snippet['tags'] else 'None'}")
         output.append(f"📊 Used: {snippet['uses']} times")
         output.append(f"📅 Created: {snippet['created_at'][:10]}")
-        output.append("\n```" + snippet['language'])
-        output.append(snippet['code'])
+        output.append("\n```" + snippet["language"])
+        output.append(snippet["code"])
         output.append("```")
 
         return "\n".join(output)
 
-    async def _search_snippets(self, snippet_manager: SnippetManager, args: List[str], context: CommandContext) -> str:
+    async def _search_snippets(
+        self, snippet_manager: SnippetManager, args: List[str], context: CommandContext
+    ) -> str:
         """Search for snippets."""
         if not args:
             return "Usage: /snippet search <query>"
@@ -237,21 +249,36 @@ Examples:
 
         for result in results:
             output.append(f"  📝 {result['name']} ({result['language']})")
-            output.append(f"     {result['description'][:80]}..." if len(result['description']) > 80 else f"     {result['description']}")
-            if result.get('match_type') == 'code':
+            output.append(
+                f"     {result['description'][:80]}..."
+                if len(result["description"]) > 80
+                else f"     {result['description']}"
+            )
+            if result.get("match_type") == "code":
                 output.append(f"     🔍 Match found in code")
             output.append("")
 
         return "\n".join(output)
 
-    async def _list_snippets(self, snippet_manager: SnippetManager, args: List[str], context: CommandContext) -> str:
+    async def _list_snippets(
+        self, snippet_manager: SnippetManager, args: List[str], context: CommandContext
+    ) -> str:
         """List snippets with optional filters."""
         category = None
         language = None
 
         for arg in args:
             arg_lower = arg.lower()
-            if arg_lower in ['python', 'javascript', 'typescript', 'java', 'go', 'rust', 'cpp', 'c']:
+            if arg_lower in [
+                "python",
+                "javascript",
+                "typescript",
+                "java",
+                "go",
+                "rust",
+                "cpp",
+                "c",
+            ]:
                 language = arg_lower
             else:
                 category = arg_lower
@@ -280,24 +307,26 @@ Examples:
         # Group by category
         by_category = {}
         for snippet in snippets:
-            cat = snippet['category']
+            cat = snippet["category"]
             if cat not in by_category:
                 by_category[cat] = []
             by_category[cat].append(snippet)
 
         for category, cat_snippets in sorted(by_category.items()):
             output.append(f"📂 {category.title()}:")
-            for snippet in sorted(cat_snippets, key=lambda x: x['uses'], reverse=True):
-                tags = f" [{', '.join(snippet['tags'][:3])}]" if snippet['tags'] else ""
+            for snippet in sorted(cat_snippets, key=lambda x: x["uses"], reverse=True):
+                tags = f" [{', '.join(snippet['tags'][:3])}]" if snippet["tags"] else ""
                 output.append(f"  • {snippet['name']} ({snippet['language']}){tags}")
-                if snippet['description']:
+                if snippet["description"]:
                     output.append(f"    {snippet['description'][:60]}...")
                 output.append(f"    Used {snippet['uses']} times")
             output.append("")
 
         return "\n".join(output)
 
-    async def _delete_snippet(self, snippet_manager: SnippetManager, args: List[str], context: CommandContext) -> str:
+    async def _delete_snippet(
+        self, snippet_manager: SnippetManager, args: List[str], context: CommandContext
+    ) -> str:
         """Delete a snippet."""
         if not args:
             return "Usage: /snippet delete <name>"
@@ -313,23 +342,24 @@ Examples:
         output.append(f"Total snippets: {stats['total_snippets']}")
         output.append(f"Total uses: {stats['total_uses']}")
 
-        if stats['languages']:
+        if stats["languages"]:
             output.append("\n📝 Languages:")
-            for lang, count in sorted(stats['languages'].items(), key=lambda x: x[1], reverse=True):
+            for lang, count in sorted(stats["languages"].items(), key=lambda x: x[1], reverse=True):
                 output.append(f"  • {lang}: {count} snippets")
 
-        if stats['categories']:
+        if stats["categories"]:
             output.append("\n📂 Categories:")
-            for cat, count in sorted(stats['categories'].items(), key=lambda x: x[1], reverse=True):
+            for cat, count in sorted(stats["categories"].items(), key=lambda x: x[1], reverse=True):
                 output.append(f"  • {cat}: {count} snippets")
 
-        if stats['most_popular']:
+        if stats["most_popular"]:
             output.append("\n⭐ Most Popular:")
-            for popular in stats['most_popular'][:5]:
+            for popular in stats["most_popular"][:5]:
                 output.append(f"  • {popular['name']}: {popular['uses']} uses")
 
         # Storage info
         import os
+
         snippet_dir_size = 0
         for root, dirs, files in os.walk(snippet_manager.snippets_dir):
             for file in files:
@@ -393,6 +423,7 @@ from ..registry import command_registry
 command_registry.register(SnippetCommand())
 command_registry.register(ImportSnippetsCommand())
 command_registry.register(ExportSnippetsCommand())
+
 
 def register():
     """Register all snippet commands."""

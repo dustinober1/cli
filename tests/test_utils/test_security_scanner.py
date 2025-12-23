@@ -1,12 +1,11 @@
 """Tests for the SecurityScanner class."""
 
-import pytest
-from unittest.mock import patch, mock_open, MagicMock
-import tempfile
-import os
 import json
+import os
+import tempfile
+from unittest.mock import MagicMock, patch
 
-from vibe_coder.utils.security_scanner import SecurityScanner, SecurityIssue
+from vibe_coder.utils.security_scanner import SecurityIssue, SecurityScanner
 
 
 class TestSecurityScannerInitialization:
@@ -44,7 +43,7 @@ class TestLoadSecurityPatterns:
             "insecure_crypto",
             "xss",
             "insecure_deserialization",
-            "weak_authentication"
+            "weak_authentication",
         ]
 
         for category in expected_categories:
@@ -92,7 +91,7 @@ def get_user(user_id):
     return cursor.fetchone()
 """
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(vulnerable_code)
             temp_path = f.name
 
@@ -124,7 +123,7 @@ def run_command(user_input):
     exec(f"print({user_input})")
 """
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(vulnerable_code)
             temp_path = f.name
 
@@ -159,7 +158,7 @@ DB_PASSWORD = "secret123"
 aws_access_key = "AKIAIOSFODNN7EXAMPLE"
 """
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(vulnerable_code)
             temp_path = f.name
 
@@ -191,7 +190,7 @@ def read_file(filename):
         return f.read()
 """
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(vulnerable_code)
             temp_path = f.name
 
@@ -220,7 +219,7 @@ function displayUserInput(input) {
 }
 """
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".js", delete=False) as f:
             f.write(vulnerable_code)
             temp_path = f.name
 
@@ -258,7 +257,7 @@ def generate_token():
     return str(random.randint(1000, 9999))
 """
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(vulnerable_code)
             temp_path = f.name
 
@@ -293,7 +292,7 @@ def greet(name: str) -> str:
     return f"Hello, {name}!"
 """
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(safe_code)
             temp_path = f.name
 
@@ -331,7 +330,7 @@ function test() {
 }
 """
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".js", delete=False) as f:
             f.write(js_code)
             temp_path = f.name
 
@@ -358,7 +357,7 @@ def func():
     return x + y
 """
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(vulnerable_code)
             temp_path = f.name
 
@@ -372,7 +371,7 @@ def func():
                 # Should include context lines
                 assert ">>> os.system" in snippet
                 # Should have more than just the vulnerable line
-                assert len(snippet.split('\n')) > 1
+                assert len(snippet.split("\n")) > 1
         finally:
             os.unlink(temp_path)
 
@@ -400,13 +399,13 @@ eval(userInput);
 """,
                 "subdir/nested.py": """
 exec(code)
-"""
+""",
             }
 
             for filepath, content in files.items():
                 full_path = os.path.join(tmpdir, filepath)
                 os.makedirs(os.path.dirname(full_path), exist_ok=True)
-                with open(full_path, 'w') as f:
+                with open(full_path, "w") as f:
                     f.write(content)
 
             issues = scanner.scan_directory(tmpdir)
@@ -425,7 +424,7 @@ exec(code)
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create more files than the limit
             for i in range(10):
-                with open(os.path.join(tmpdir, f"file{i}.py"), 'w') as f:
+                with open(os.path.join(tmpdir, f"file{i}.py"), "w") as f:
                     f.write(f"def func{i}(): pass\n")
 
             # Scan with limit of 5 files
@@ -444,10 +443,10 @@ exec(code)
             os.makedirs(os.path.join(tmpdir, ".hidden"))
 
             # Add files to both
-            with open(os.path.join(tmpdir, "normal/file.py"), 'w') as f:
+            with open(os.path.join(tmpdir, "normal/file.py"), "w") as f:
                 f.write("os.system('ls')\n")
 
-            with open(os.path.join(tmpdir, ".hidden/file.py"), 'w') as f:
+            with open(os.path.join(tmpdir, ".hidden/file.py"), "w") as f:
                 f.write("eval('code')\n")
 
             issues = scanner.scan_directory(tmpdir)
@@ -471,16 +470,16 @@ exec(code)
                 "code.js": "eval('code')",
                 "readme.md": "# README",
                 "data.json": '{"key": "value"}',
-                "image.png": b'\x89PNG'  # Binary content
+                "image.png": b"\x89PNG",  # Binary content
             }
 
             for filename, content in files.items():
                 filepath = os.path.join(tmpdir, filename)
                 if isinstance(content, bytes):
-                    with open(filepath, 'wb') as f:
+                    with open(filepath, "wb") as f:
                         f.write(content)
                 else:
-                    with open(filepath, 'w') as f:
+                    with open(filepath, "w") as f:
                         f.write(content)
 
             issues = scanner.scan_directory(tmpdir)
@@ -520,8 +519,8 @@ class TestGenerateReport:
                 description="SQL injection vulnerability",
                 file_path="/path/to/file.py",
                 line_number=10,
-                code_snippet=">>> query = \"SELECT * FROM users WHERE id = %s\" % user_id",
-                recommendation="Use parameterized queries"
+                code_snippet='>>> query = "SELECT * FROM users WHERE id = %s" % user_id',
+                recommendation="Use parameterized queries",
             ),
             SecurityIssue(
                 severity="high",
@@ -529,8 +528,8 @@ class TestGenerateReport:
                 description="Hardcoded API key",
                 file_path="/path/to/config.py",
                 line_number=5,
-                code_snippet=">>> API_KEY = \"sk_live_123***4567\"",
-                recommendation="Use environment variables"
+                code_snippet='>>> API_KEY = "sk_live_123***4567"',
+                recommendation="Use environment variables",
             ),
             SecurityIssue(
                 severity="medium",
@@ -539,8 +538,8 @@ class TestGenerateReport:
                 file_path="/path/to/auth.py",
                 line_number=20,
                 code_snippet=">>> hashlib.md5(password.encode()).hexdigest()",
-                recommendation="Use SHA-256 or stronger"
-            )
+                recommendation="Use SHA-256 or stronger",
+            ),
         ]
 
         report = scanner.generate_report(issues)
@@ -558,7 +557,7 @@ class TestGenerateReport:
         assert "Use parameterized queries" in report
 
         # Check code snippet
-        assert ">>> query = \"SELECT * FROM users" in report
+        assert '>>> query = "SELECT * FROM users' in report
 
         # Check recommendations
         assert "Address critical vulnerabilities immediately" in report
@@ -576,7 +575,7 @@ class TestGenerateReport:
                 file_path="/path/to/file.py",
                 line_number=1,
                 code_snippet="# Low severity issue",
-                recommendation="Consider fixing"
+                recommendation="Consider fixing",
             )
         ]
 
@@ -648,28 +647,30 @@ class TestDetectLanguage:
 class TestRunToolScan:
     """Test external security tool integration."""
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_run_tool_scan_bandit(self, mock_run):
         """Test running bandit security scanner."""
         scanner = SecurityScanner()
 
         # Mock bandit output
         mock_run.return_value.returncode = 1  # Issues found
-        mock_run.return_value.stdout = json.dumps({
-            "results": [
-                {
-                    "test_name": "hardcoded_password",
-                    "issue_severity": "HIGH",
-                    "issue_text": "Possible hardcoded password",
-                    "filename": "test.py",
-                    "line_number": 5
-                }
-            ]
-        })
+        mock_run.return_value.stdout = json.dumps(
+            {
+                "results": [
+                    {
+                        "test_name": "hardcoded_password",
+                        "issue_severity": "HIGH",
+                        "issue_text": "Possible hardcoded password",
+                        "filename": "test.py",
+                        "line_number": 5,
+                    }
+                ]
+            }
+        )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create a Python file
-            with open(os.path.join(tmpdir, "test.py"), 'w') as f:
+            with open(os.path.join(tmpdir, "test.py"), "w") as f:
                 f.write("password = 'secret123'\n")
 
             results = scanner.run_tool_scan(tmpdir, tool="bandit")
@@ -678,23 +679,25 @@ class TestRunToolScan:
             assert len(results["issues"]) == 1
             assert results["issues"][0]["test_name"] == "hardcoded_password"
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_run_tool_scan_semgrep(self, mock_run):
         """Test running semgrep security scanner."""
         scanner = SecurityScanner()
 
         # Mock semgrep output
         mock_run.return_value.returncode = 0
-        mock_run.return_value.stdout = json.dumps({
-            "results": [
-                {
-                    "check_id": "python.security.eval",
-                    "message": "Use of eval detected",
-                    "path": "test.py",
-                    "start": {"line": 10}
-                }
-            ]
-        })
+        mock_run.return_value.stdout = json.dumps(
+            {
+                "results": [
+                    {
+                        "check_id": "python.security.eval",
+                        "message": "Use of eval detected",
+                        "path": "test.py",
+                        "start": {"line": 10},
+                    }
+                ]
+            }
+        )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             results = scanner.run_tool_scan(tmpdir, tool="semgrep")
@@ -702,25 +705,24 @@ class TestRunToolScan:
             assert results["tool"] == "semgrep"
             assert len(results["issues"]) == 1
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_run_tool_scan_npm_audit(self, mock_run):
         """Test running npm audit."""
         scanner = SecurityScanner()
 
         # Mock npm audit output
         mock_run.return_value.returncode = 1
-        mock_run.return_value.stdout = json.dumps({
-            "vulnerabilities": {
-                "lodash": {
-                    "severity": "high",
-                    "title": "Prototype Pollution in lodash"
+        mock_run.return_value.stdout = json.dumps(
+            {
+                "vulnerabilities": {
+                    "lodash": {"severity": "high", "title": "Prototype Pollution in lodash"}
                 }
             }
-        })
+        )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create package.json
-            with open(os.path.join(tmpdir, "package.json"), 'w') as f:
+            with open(os.path.join(tmpdir, "package.json"), "w") as f:
                 f.write('{"name": "test", "dependencies": {"lodash": "^4.0.0"}}\n')
 
             results = scanner.run_tool_scan(tmpdir, tool="npm-audit")
@@ -728,7 +730,7 @@ class TestRunToolScan:
             assert results["tool"] == "npm-audit"
             assert len(list(results["issues"])) == 1
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_run_tool_scan_auto_detect(self, mock_run):
         """Test automatic tool detection."""
         scanner = SecurityScanner()
@@ -747,7 +749,7 @@ class TestRunToolScan:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create Python file
-            with open(os.path.join(tmpdir, "test.py"), 'w') as f:
+            with open(os.path.join(tmpdir, "test.py"), "w") as f:
                 f.write("print('hello')\n")
 
             results = scanner.run_tool_scan(tmpdir, tool="auto")
@@ -755,7 +757,7 @@ class TestRunToolScan:
             # Should detect and use bandit for Python
             assert results["tool"] == "bandit"
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_run_tool_scan_no_tools(self, mock_run):
         """Test when no security tools are available."""
         scanner = SecurityScanner()
@@ -795,7 +797,7 @@ class TestSecurityIssue:
             file_path="/path/to/file.py",
             line_number=10,
             code_snippet=">>> vulnerable code here",
-            recommendation="Use parameterized queries"
+            recommendation="Use parameterized queries",
         )
 
         assert issue.severity == "critical"
@@ -815,7 +817,7 @@ class TestSecurityIssue:
             file_path="test.js",
             line_number=5,
             code_snippet=">>> innerHTML = userInput",
-            recommendation="Sanitize input"
+            recommendation="Sanitize input",
         )
 
         issue2 = SecurityIssue(
@@ -825,7 +827,7 @@ class TestSecurityIssue:
             file_path="test.js",
             line_number=5,
             code_snippet=">>> innerHTML = userInput",
-            recommendation="Sanitize input"
+            recommendation="Sanitize input",
         )
 
         assert issue1 == issue2
@@ -839,7 +841,7 @@ class TestSecurityIssue:
             file_path="/path/file.py",
             line_number=1,
             code_snippet=">>> eval(input)",
-            recommendation="Avoid eval"
+            recommendation="Avoid eval",
         )
 
         str_repr = str(issue)
@@ -855,7 +857,7 @@ class TestEdgeCases:
         """Test scanning an empty file."""
         scanner = SecurityScanner()
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write("")
             temp_path = f.name
 
@@ -875,7 +877,9 @@ message = "Hello, 世界! 🌍"
 password = "密码123"  # Password in Chinese
 """
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False, encoding='utf-8') as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".py", delete=False, encoding="utf-8"
+        ) as f:
             f.write(unicode_code)
             temp_path = f.name
 
@@ -893,7 +897,7 @@ password = "密码123"  # Password in Chinese
         # Generate a large Python file
         large_content = "def func():\n    return " + "x + " * 10000 + "1\n"
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(large_content)
             temp_path = f.name
 
@@ -917,7 +921,7 @@ password = "密码123"  # Password in Chinese
 
         # This is hard to test reliably without root permissions
         # We'll just ensure it doesn't crash
-        with patch('os.walk') as mock_walk:
+        with patch("os.walk") as mock_walk:
             mock_walk.side_effect = PermissionError("Permission denied")
 
             issues = scanner.scan_directory("/some/path")

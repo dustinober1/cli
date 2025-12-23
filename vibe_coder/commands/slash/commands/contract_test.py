@@ -3,7 +3,7 @@
 import json
 import re
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 from ..base import CommandContext, SlashCommand
 from ..file_ops import FileOperations
@@ -37,8 +37,11 @@ Examples:
 - /contract-test postman.json --framework newman --tests contract_tests/"""
 
         api_spec = args[0]
-        options = {arg[2:]: arg[4:] if arg.startswith("--") and "=" in arg else True
-                  for arg in args[1:] if arg.startswith("--")}
+        options = {
+            arg[2:]: arg[4:] if arg.startswith("--") and "=" in arg else True
+            for arg in args[1:]
+            if arg.startswith("--")
+        }
 
         framework = options.get("framework", "pact")
         consumer = options.get("consumer", "consumer")
@@ -108,7 +111,7 @@ Examples:
             elif framework == "spring-cloud-contract":
                 output.append("  ./gradlew contractTest")
 
-            return '\n'.join(output)
+            return "\n".join(output)
 
         except Exception as e:
             return f"Error generating contract tests: {e}"
@@ -118,25 +121,27 @@ Examples:
         # Check file extension
         ext = Path(filename).suffix.lower()
 
-        if ext == '.json':
+        if ext == ".json":
             try:
                 data = json.loads(content)
-                if 'openapi' in data or 'swagger' in data:
-                    return 'openapi'
-                elif 'info' in data and 'paths' in data:
-                    return 'openapi'
-                elif 'item' in data or 'info' in data:
-                    return 'postman'
+                if "openapi" in data or "swagger" in data:
+                    return "openapi"
+                elif "info" in data and "paths" in data:
+                    return "openapi"
+                elif "item" in data or "info" in data:
+                    return "postman"
             except:
                 pass
-        elif ext in ['.yaml', '.yml']:
-            if 'openapi:' in content.lower() or 'swagger:' in content.lower():
-                return 'openapi'
+        elif ext in [".yaml", ".yml"]:
+            if "openapi:" in content.lower() or "swagger:" in content.lower():
+                return "openapi"
 
         # Default assumption
-        return 'openapi'
+        return "openapi"
 
-    async def _extract_contracts(self, content: str, spec_type: str, context: CommandContext) -> List[Dict]:
+    async def _extract_contracts(
+        self, content: str, spec_type: str, context: CommandContext
+    ) -> List[Dict]:
         """Extract contract definitions from API spec."""
         prompt = f"""Extract API contracts from this {spec_type} specification:
 
@@ -159,11 +164,16 @@ Return a structured list of contracts with:
 - Headers
 - Authentication"""
 
-        response = await context.provider.client.send_request([
-            {"role": "system", "content": "You are an API contract specialist. Extract clear, structured contracts from API specifications.",
-             "name": "ContractExtractor"},
-            {"role": "user", "content": prompt}
-        ])
+        response = await context.provider.client.send_request(
+            [
+                {
+                    "role": "system",
+                    "content": "You are an API contract specialist. Extract clear, structured contracts from API specifications.",
+                    "name": "ContractExtractor",
+                },
+                {"role": "user", "content": prompt},
+            ]
+        )
 
         # Try to parse the response as JSON
         try:
@@ -172,8 +182,14 @@ Return a structured list of contracts with:
             # Fallback: return empty list if parsing fails
             return []
 
-    async def _generate_contract_tests(self, contracts: List[Dict], framework: str,
-                                    consumer: str, provider: str, context: CommandContext) -> Dict[str, str]:
+    async def _generate_contract_tests(
+        self,
+        contracts: List[Dict],
+        framework: str,
+        consumer: str,
+        provider: str,
+        context: CommandContext,
+    ) -> Dict[str, str]:
         """Generate contract test files."""
 
         prompt = f"""Generate {framework} contract tests for these API contracts:
@@ -193,45 +209,52 @@ Requirements:
 
 Generate complete test files that can be run directly."""
 
-        response = await context.provider.client.send_request([
-            {"role": "system", "content": f"You are a contract testing expert using {framework}. Generate comprehensive, runnable contract tests.",
-             "name": "ContractTestGenerator"},
-            {"role": "user", "content": prompt}
-        ])
+        response = await context.provider.client.send_request(
+            [
+                {
+                    "role": "system",
+                    "content": f"You are a contract testing expert using {framework}. Generate comprehensive, runnable contract tests.",
+                    "name": "ContractTestGenerator",
+                },
+                {"role": "user", "content": prompt},
+            ]
+        )
 
         # Parse response to extract files
         content = response.content.strip()
 
         # Simple file extraction - look for code blocks with filenames
         files = {}
-        file_pattern = r'```(\w+)?\n?(?:#? ?(.+?)\n)?((?:.|\n)*?)```'
+        file_pattern = r"```(\w+)?\n?(?:#? ?(.+?)\n)?((?:.|\n)*?)```"
 
         for match in re.finditer(file_pattern, content):
-            lang = match.group(1) or ''
-            filename = match.group(2) or f'test.{lang}'
+            lang = match.group(1) or ""
+            filename = match.group(2) or f"test.{lang}"
             code = match.group(3)
 
             if filename and code:
                 # Add proper extension if missing
                 if not Path(filename).suffix:
-                    if 'python' in lang or 'pytest' in code:
-                        filename += '.py'
-                    elif 'javascript' in lang or 'newman' in code:
-                        filename += '.js'
-                    elif 'java' in lang:
-                        filename += '.java'
-                    elif 'groovy' in lang:
-                        filename += '.groovy'
+                    if "python" in lang or "pytest" in code:
+                        filename += ".py"
+                    elif "javascript" in lang or "newman" in code:
+                        filename += ".js"
+                    elif "java" in lang:
+                        filename += ".java"
+                    elif "groovy" in lang:
+                        filename += ".groovy"
 
                 files[filename] = code
 
         # Fallback: return single file
         if not files:
-            files = {'contract_tests.py': content}
+            files = {"contract_tests.py": content}
 
         return files
 
-    async def _generate_mocks(self, contracts: List[Dict], framework: str, context: CommandContext) -> Dict[str, str]:
+    async def _generate_mocks(
+        self, contracts: List[Dict], framework: str, context: CommandContext
+    ) -> Dict[str, str]:
         """Generate mock server definitions."""
 
         prompt = f"""Generate mock server definitions for these API contracts:
@@ -249,21 +272,26 @@ Requirements:
 
 Create complete mock server configuration."""
 
-        response = await context.provider.client.send_request([
-            {"role": "system", "content": f"You are a mock server expert. Generate realistic mock servers based on API contracts.",
-             "name": "MockGenerator"},
-            {"role": "user", "content": prompt}
-        ])
+        response = await context.provider.client.send_request(
+            [
+                {
+                    "role": "system",
+                    "content": f"You are a mock server expert. Generate realistic mock servers based on API contracts.",
+                    "name": "MockGenerator",
+                },
+                {"role": "user", "content": prompt},
+            ]
+        )
 
         content = response.content.strip()
 
         # Extract files similar to test generation
         files = {}
-        if 'pact' in framework.lower():
+        if "pact" in framework.lower():
             # Pact might generate provider states
-            files['provider_states.js'] = content
+            files["provider_states.js"] = content
         else:
-            files['mock_server.js'] = content
+            files["mock_server.js"] = content
 
         return files
 
@@ -273,6 +301,7 @@ from ..registry import command_registry
 
 # Auto-register commands when module is imported
 command_registry.register(ContractTestCommand())
+
 
 def register():
     """Register all contract test commands."""

@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 from ..base import CommandContext, SlashCommand
 from ..file_ops import FileOperations
@@ -56,10 +56,15 @@ Code to test:
 Provide only the complete test file content without explanations."""
 
             # Get AI response
-            response = await context.provider.client.send_request([
-                {"role": "system", "content": f"You are an expert in {language} testing. Generate comprehensive, production-ready unit tests using best practices."},
-                {"role": "user", "content": prompt}
-            ])
+            response = await context.provider.client.send_request(
+                [
+                    {
+                        "role": "system",
+                        "content": f"You are an expert in {language} testing. Generate comprehensive, production-ready unit tests using best practices.",
+                    },
+                    {"role": "user", "content": prompt},
+                ]
+            )
 
             test_content = response.content.strip()
 
@@ -78,7 +83,11 @@ Provide only the complete test file content without explanations."""
             await file_ops.write_file(test_file, test_content)
 
             # Count tests generated
-            test_count = test_content.count("def test_") if language == "python" else test_content.count("it(")
+            test_count = (
+                test_content.count("def test_")
+                if language == "python"
+                else test_content.count("it(")
+            )
 
             return f"""Generated {test_count} tests for {file_path}
 - Test file: {test_file}
@@ -104,29 +113,29 @@ Run tests with:
         path = Path(source_file)
 
         # Create test file name
-        if path.name.startswith('test_'):
+        if path.name.startswith("test_"):
             return source_file
 
         # Python convention
-        if path.suffix == '.py':
+        if path.suffix == ".py":
             return str(path.parent / f"test_{path.name}")
 
         # JavaScript/TypeScript convention
-        if path.suffix in ['.js', '.ts', '.jsx', '.tsx']:
+        if path.suffix in [".js", ".ts", ".jsx", ".tsx"]:
             return str(path.parent / f"{path.stem}.test{path.suffix}")
 
         # Java convention
-        if path.suffix == '.java':
+        if path.suffix == ".java":
             # Move to test directory structure
             parts = list(path.parts)
-            if 'src' in parts:
+            if "src" in parts:
                 test_parts = []
                 for part in parts:
-                    if part == 'src':
-                        test_parts.append('src')
-                        test_parts.append('test')
-                    elif part == 'main':
-                        test_parts.append('test')
+                    if part == "src":
+                        test_parts.append("src")
+                        test_parts.append("test")
+                    elif part == "main":
+                        test_parts.append("test")
                     else:
                         test_parts.append(part)
                 return str(Path(*test_parts))
@@ -166,9 +175,9 @@ Examples:
 
         try:
             # Determine the type of E2E test needed
-            if feature.startswith('/'):
+            if feature.startswith("/"):
                 test_type = "api"
-            elif any(keyword in feature.lower() for keyword in ['ui', 'page', 'flow', 'journey']):
+            elif any(keyword in feature.lower() for keyword in ["ui", "page", "flow", "journey"]):
                 test_type = "ui"
             else:
                 test_type = "feature"
@@ -225,11 +234,16 @@ Requirements:
 Generate complete test file with fixtures and test cases."""
 
             # Get AI response
-            response = await context.provider.client.send_request([
-                {"role": "system", "content": "You are an expert in end-to-end testing. Generate comprehensive integration tests that cover real-world scenarios.",
-                 "name": "E2ETestGenerator"},
-                {"role": "user", "content": prompt}
-            ])
+            response = await context.provider.client.send_request(
+                [
+                    {
+                        "role": "system",
+                        "content": "You are an expert in end-to-end testing. Generate comprehensive integration tests that cover real-world scenarios.",
+                        "name": "E2ETestGenerator",
+                    },
+                    {"role": "user", "content": prompt},
+                ]
+            )
 
             test_content = response.content.strip()
 
@@ -339,11 +353,16 @@ Code to benchmark:
 Generate complete benchmark file with setup, teardown, and benchmark functions."""
 
             # Get AI response
-            response = await context.provider.client.send_request([
-                {"role": "system", "content": "You are a performance testing expert. Generate comprehensive benchmarks using industry best practices.",
-                 "name": "BenchmarkGenerator"},
-                {"role": "user", "content": prompt}
-            ])
+            response = await context.provider.client.send_request(
+                [
+                    {
+                        "role": "system",
+                        "content": "You are a performance testing expert. Generate comprehensive benchmarks using industry best practices.",
+                        "name": "BenchmarkGenerator",
+                    },
+                    {"role": "user", "content": prompt},
+                ]
+            )
 
             benchmark_content = response.content.strip()
 
@@ -453,11 +472,16 @@ For each function/method, identify and test:
 Generate complete property-based test file."""
 
             # Get AI response
-            response = await context.provider.client.send_request([
-                {"role": "system", "content": "You are an expert in property-based testing. Identify invariants and properties that should always hold true.",
-                 "name": "PropertyTestGenerator"},
-                {"role": "user", "content": prompt}
-            ])
+            response = await context.provider.client.send_request(
+                [
+                    {
+                        "role": "system",
+                        "content": "You are an expert in property-based testing. Identify invariants and properties that should always hold true.",
+                        "name": "PropertyTestGenerator",
+                    },
+                    {"role": "user", "content": prompt},
+                ]
+            )
 
             test_content = response.content.strip()
 
@@ -559,11 +583,16 @@ Generate complete fuzz testing setup including:
 - Integration with CI/CD"""
 
             # Get AI response
-            response = await context.provider.client.send_request([
-                {"role": "system", "content": "You are a fuzz testing expert. Create comprehensive fuzzing setups that find security vulnerabilities and crashes.",
-                 "name": "FuzzTestGenerator"},
-                {"role": "user", "content": prompt}
-            ])
+            response = await context.provider.client.send_request(
+                [
+                    {
+                        "role": "system",
+                        "content": "You are a fuzz testing expert. Create comprehensive fuzzing setups that find security vulnerabilities and crashes.",
+                        "name": "FuzzTestGenerator",
+                    },
+                    {"role": "user", "content": prompt},
+                ]
+            )
 
             fuzz_content = response.content.strip()
 
@@ -576,7 +605,8 @@ Generate complete fuzz testing setup including:
             if "```" in fuzz_content:
                 # Extract all code blocks
                 import re
-                pattern = r'```(\w+)?\n(.*?)```'
+
+                pattern = r"```(\w+)?\n(.*?)```"
                 matches = re.findall(pattern, fuzz_content, re.DOTALL)
 
                 for lang, code in matches:
@@ -693,7 +723,7 @@ def merge_coverage_reports(report_paths: List[str], output_format: str = "html")
         # Find matching files
         import glob
         for report_file in glob.glob(path_pattern):
-            print(f"Processing: {{report_file}}")
+            print("Processing: {{report_file}}")
 
             if report_file.endswith('.json'):
                 data = _load_json_coverage(report_file)
@@ -702,7 +732,7 @@ def merge_coverage_reports(report_paths: List[str], output_format: str = "html")
             elif report_file.endswith('.lcov'):
                 data = _load_lcov_coverage(report_file)
             else:
-                print(f"Skipping unsupported format: {{report_file}}")
+                print("Skipping unsupported format: {{report_file}}")
                 continue
 
             # Merge data
@@ -841,14 +871,14 @@ def _output_report(data: Dict, format: str):
         output_file = output_dir / "coverage.json"
         with open(output_file, 'w') as f:
             json.dump(data, f, indent=2)
-        print(f"JSON report saved to: {{output_file}}")
+        print("JSON report saved to: {{output_file}}")
 
     elif format == "xml":
         # Convert to Cobertura XML
         root = ET.Element("coverage")
         root.set("lines-covered", str(data["summary"]["covered_lines"]))
         root.set("lines-valid", str(data["summary"]["total_lines"]))
-        root.set("line-rate", f"{{data['summary']['coverage']/100:.4f}}")
+        root.set("line-rate", "data['summary']['coverage']/100:.4f")
 
         sources = ET.SubElement(root, "sources")
         ET.SubElement(sources, "source").text = "."
@@ -856,13 +886,13 @@ def _output_report(data: Dict, format: str):
         packages = ET.SubElement(root, "packages")
         package = ET.SubElement(packages, "package")
         package.set("name", "merged")
-        package.set("line-rate", f"{{data['summary']['coverage']/100:.4f}}")
+        package.set("line-rate", "data['summary']['coverage']/100:.4f")
 
         classes = ET.SubElement(package, "classes")
         for filename, file_data in data["files"].items():
             cls = ET.SubElement(classes, "class")
             cls.set("filename", filename)
-            cls.set("line-rate", f"{{file_data['covered_lines']/file_data['total_lines'] if file_data['total_lines'] > 0 else 0:.4f}}")
+            cls.set("line-rate", "file_data['covered_lines']/file_data['total_lines'] if file_data['total_lines'] > 0 else 0:.4f")
 
             methods = ET.SubElement(cls, "methods")
             lines = ET.SubElement(cls, "lines")
@@ -875,7 +905,7 @@ def _output_report(data: Dict, format: str):
         tree = ET.ElementTree(root)
         output_file = output_dir / "coverage.xml"
         tree.write(output_file, encoding="utf-8", xml_declaration=True)
-        print(f"XML report saved to: {{output_file}}")
+        print("XML report saved to: {{output_file}}")
 
     elif format == "html":
         # Generate HTML report
@@ -885,21 +915,21 @@ def _output_report(data: Dict, format: str):
             '<head>',
             '    <title>Merged Coverage Report</title>',
             '    <style>',
-            '        body { font-family: Arial, sans-serif; margin: 20px; }',
-            '        table { border-collapse: collapse; width: 100%; }',
-            '        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }',
-            '        th { background-color: #f2f2f2; }',
-            '        .low { background-color: #ffcccc; }',
-            '        .medium { background-color: #ffffcc; }',
-            '        .high { background-color: #ccffcc; }',
+            '        body {{ font-family: Arial, sans-serif; margin: 20px; }}',
+            '        table {{ border-collapse: collapse; width: 100%; }}',
+            '        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}',
+            '        th {{ background-color: #f2f2f2; }}',
+            '        .low {{ background-color: #ffcccc; }}',
+            '        .medium {{ background-color: #ffffcc; }}',
+            '        .high {{ background-color: #ccffcc; }}',
             '    </style>',
             '</head>',
             '<body>',
             '    <h1>Merged Coverage Report</h1>',
             '    <h2>Summary</h2>',
-            f'    <p>Total Lines: {data["summary"]["total_lines"]}</p>',
-            f'    <p>Covered Lines: {data["summary"]["covered_lines"]}</p>',
-            f'    <p>Coverage: {data["summary"]["coverage"]:.2f}%</p>',
+            '    <p>Total Lines: {{data["summary"]["total_lines"]}}</p>',
+            '    <p>Covered Lines: {{data["summary"]["covered_lines"]}}</p>',
+            '    <p>Coverage: {{data["summary"]["coverage"]:.2f}}%</p>',
             '    <h2>File Coverage</h2>',
             '    <table>',
             '        <tr>',
@@ -917,10 +947,10 @@ def _output_report(data: Dict, format: str):
             css_class = "high" if coverage >= 80 else "medium" if coverage >= 60 else "low"
 
             html_parts.extend([
-                f'        <tr class="{css_class}">',
-                f'            <td>{filename}</td>',
-                f'            <td>{coverage:.2f}%</td>',
-                f'            <td>{file_data["covered_lines"]} / {file_data["total_lines"]}</td>',
+                '        <tr class="{{css_class}}">',
+                '            <td>{{filename}}</td>',
+                '            <td>{{coverage:.2f}}%</td>',
+                '            <td>{{file_data["covered_lines"]}} / {{file_data["total_lines"]}}</td>',
                 '        </tr>'
             ])
 
@@ -935,7 +965,7 @@ def _output_report(data: Dict, format: str):
         output_file = output_dir / "index.html"
         with open(output_file, 'w') as f:
             f.write(html_content)
-        print(f"HTML report saved to: {{output_file}}")
+        print("HTML report saved to: {{output_file}}")
 
     elif format == "lcov":
         # Generate LCOV format
@@ -947,7 +977,7 @@ def _output_report(data: Dict, format: str):
                 for line_num, hits in file_data["lines"].items():
                     f.write(f"DA:{{line_num}},{{hits}}\\n")
                 f.write("end_of_record\\n")
-        print(f"LCOV report saved to: {{output_file}}")
+        print("LCOV report saved to: {{output_file}}")
 
 if __name__ == "__main__":
     import sys
@@ -955,7 +985,7 @@ if __name__ == "__main__":
     output_format = "{output_format}"
 
     result = merge_coverage_reports(report_paths, output_format)
-    print(f"\\nMerged coverage: {{result['summary']['coverage']:.2f}}%")
+    print("\\nMerged coverage: {{result['summary']['coverage']:.2f}}%")
 '''
 
             # Save merge script
@@ -971,7 +1001,7 @@ if __name__ == "__main__":
                 [sys.executable, str(merge_file)],
                 capture_output=True,
                 text=True,
-                cwd=context.working_directory
+                cwd=context.working_directory,
             )
 
             return f"""Coverage merge completed successfully!
@@ -1002,6 +1032,7 @@ command_registry.register(BenchmarkCommand())
 command_registry.register(TestPropertyCommand())
 command_registry.register(TestFuzzCommand())
 command_registry.register(CoverageMergeCommand())
+
 
 def register():
     """Register all advanced test commands."""

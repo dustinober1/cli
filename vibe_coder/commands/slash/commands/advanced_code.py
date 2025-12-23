@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 from ..base import CommandContext, SlashCommand
 from ..file_ops import FileOperations
@@ -41,10 +41,15 @@ Continue from where the code ends."""
 
         try:
             # Get AI response
-            response = await context.provider.client.send_request([
-                {"role": "system", "content": "You are a code completion assistant. Complete the given code snippet accurately and concisely."},
-                {"role": "user", "content": prompt}
-            ])
+            response = await context.provider.client.send_request(
+                [
+                    {
+                        "role": "system",
+                        "content": "You are a code completion assistant. Complete the given code snippet accurately and concisely.",
+                    },
+                    {"role": "user", "content": prompt},
+                ]
+            )
 
             completed_code = response.content.strip()
 
@@ -108,10 +113,15 @@ Original code:
 ```"""
 
             # Get AI response
-            response = await context.provider.client.send_request([
-                {"role": "system", "content": "You are a performance optimization expert. Analyze code and provide optimized versions with clear explanations."},
-                {"role": "user", "content": prompt}
-            ])
+            response = await context.provider.client.send_request(
+                [
+                    {
+                        "role": "system",
+                        "content": "You are a performance optimization expert. Analyze code and provide optimized versions with clear explanations.",
+                    },
+                    {"role": "user", "content": prompt},
+                ]
+            )
 
             # Create backup before optimizing
             backup_path = await file_ops.create_backup(file_path)
@@ -258,12 +268,12 @@ async def {name.lower()}_endpoint(
     Description: [Add class description here]
     """
 
-    def __init__(self{", " + ", ".join([f"{arg}: str" for arg in args[1:]]) if len(args) > 1 else ""}):
+    def __init__(self{", " + ", ".join([f"{{arg}}: str" for arg in args[1:]]) if len(args) > 1 else ""}):
         """
         Initialize {name.title()} instance.
         """
         super().__init__()
-        {chr(10).join([f"        self.{arg} = {arg}" for arg in args[1:]]) if len(args) > 1 else ""}
+        {chr(10).join([f"        self.{{arg}} = {{arg}}" for arg in args[1:]]) if len(args) > 1 else ""}
         # TODO: Add initialization logic
 
     def __str__(self) -> str:
@@ -272,7 +282,7 @@ async def {name.lower()}_endpoint(
 
     def _get_attributes(self) -> str:
         """Get attributes for string representation."""
-        return ", ".join([f"{arg}={{self.{arg}}}" for arg in args[1:]]) if len(args) > 1 else ""
+        return ", ".join([f"{{arg}}={{self.{{arg}}}}" for arg in args[1:]]) if len(args) > 1 else ""
 
     # TODO: Add methods
 '''
@@ -362,7 +372,7 @@ if __name__ == "__main__":
 
     def _get_config_template(self, name: str, args: List[str]) -> str:
         """Generate configuration file template."""
-        return f'''# {name.title()} Configuration
+        return f"""# {name.title()} Configuration
 
 # Application settings
 app_name = "{name}"
@@ -387,11 +397,11 @@ log_level = "INFO"
 log_file = "{name.lower()}.log"
 
 # TODO: Add additional configuration as needed
-'''
+"""
 
     def _get_docker_template(self, name: str, args: List[str]) -> str:
         """Generate Dockerfile template."""
-        return f'''# Dockerfile for {name}
+        return f"""# Dockerfile for {name}
 FROM python:3.9-slim
 
 # Set working directory
@@ -427,11 +437,11 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \\
 
 # Run the application
 CMD ["python", "-m", "{name}"]
-'''
+"""
 
     def _get_github_template(self, name: str, args: List[str]) -> str:
         """Generate GitHub Actions workflow template."""
-        return f'''name: {name.title()} CI/CD
+        return f"""name: {name.title()} CI/CD
 
 on:
   push:
@@ -488,11 +498,11 @@ jobs:
       run: |
         echo "Deploying {name} to production..."
         # TODO: Add deployment steps
-'''
+"""
 
     def _get_readme_template(self, name: str, args: List[str]) -> str:
         """Generate README.md template."""
-        return f'''# {name.title()}
+        return f"""# {name.title()}
 
 {args[0] if args else "Description of the " + name + " project."}
 
@@ -582,7 +592,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 #### Added
 - Initial release
 - Basic functionality
-'''
+"""
 
     def _get_filename_for_template(self, template_type: str, name: str) -> str:
         """Get appropriate filename for template type."""
@@ -661,10 +671,15 @@ Original code:
 Provide only the converted {to_lang} code without explanations."""
 
             # Get AI response
-            response = await context.provider.client.send_request([
-                {"role": "system", "content": f"You are an expert in both {from_lang} and {to_lang}. Convert code accurately while maintaining functionality."},
-                {"role": "user", "content": prompt}
-            ])
+            response = await context.provider.client.send_request(
+                [
+                    {
+                        "role": "system",
+                        "content": f"You are an expert in both {from_lang} and {to_lang}. Convert code accurately while maintaining functionality.",
+                    },
+                    {"role": "user", "content": prompt},
+                ]
+            )
 
             converted_code = response.content.strip()
 
@@ -736,10 +751,15 @@ Provide:
                 return f"Parallelization not yet supported for {language}. Currently supports Python only."
 
             # Get AI response
-            response = await context.provider.client.send_request([
-                {"role": "system", "content": "You are an expert in concurrent programming. Add appropriate parallelization patterns to code while maintaining correctness."},
-                {"role": "user", "content": prompt}
-            ])
+            response = await context.provider.client.send_request(
+                [
+                    {
+                        "role": "system",
+                        "content": "You are an expert in concurrent programming. Add appropriate parallelization patterns to code while maintaining correctness.",
+                    },
+                    {"role": "user", "content": prompt},
+                ]
+            )
 
             # Create backup
             backup_path = await file_ops.create_backup(file_path)
@@ -753,7 +773,7 @@ Provide:
                     parallelized_content = parallelized_content[start:end]
 
             # Save parallelized version
-            parallel_file = file_path.replace('.py', '_parallel.py')
+            parallel_file = file_path.replace(".py", "_parallel.py")
             await file_ops.write_file(parallel_file, parallelized_content)
 
             return f"""Code parallelized successfully!
@@ -782,6 +802,7 @@ command_registry.register(OptimizeCommand())
 command_registry.register(TemplateCommand())
 command_registry.register(ConvertCommand())
 command_registry.register(ParallelizeCommand())
+
 
 def register():
     """Register all advanced code commands."""

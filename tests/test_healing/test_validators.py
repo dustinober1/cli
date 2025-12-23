@@ -1,14 +1,15 @@
 """Tests for the CodeValidator class."""
 
 import asyncio
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, mock_open
-from pathlib import Path
-import tempfile
 import sys
+import tempfile
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from vibe_coder.healing.validators import CodeValidator
+import pytest
+
 from vibe_coder.healing.types import ValidationResult, ValidationStrategy
+from vibe_coder.healing.validators import CodeValidator
 
 
 class TestCodeValidatorInitialization:
@@ -26,10 +27,7 @@ class TestCodeValidatorInitialization:
         custom_root = "/tmp/project"
         custom_python = "/usr/bin/python3"
 
-        validator = CodeValidator(
-            project_root=custom_root,
-            python_executable=custom_python
-        )
+        validator = CodeValidator(project_root=custom_root, python_executable=custom_python)
 
         assert validator.project_root == Path(custom_root)
         assert validator.python_executable == custom_python
@@ -43,13 +41,11 @@ class TestValidateMethod:
         """Test validation with a single strategy."""
         validator = CodeValidator()
 
-        with patch.object(validator, 'validate_syntax') as mock_syntax:
+        with patch.object(validator, "validate_syntax") as mock_syntax:
             mock_syntax.return_value = ValidationResult(is_valid=True)
 
             result = await validator.validate(
-                code="def test(): pass",
-                language="python",
-                strategies=[ValidationStrategy.SYNTAX]
+                code="def test(): pass", language="python", strategies=[ValidationStrategy.SYNTAX]
             )
 
             assert len(result) == 1
@@ -60,9 +56,11 @@ class TestValidateMethod:
         """Test validation with multiple strategies."""
         validator = CodeValidator()
 
-        with patch.object(validator, 'validate_syntax') as mock_syntax, \
-             patch.object(validator, 'validate_types') as mock_types, \
-             patch.object(validator, 'validate_linting') as mock_lint:
+        with (
+            patch.object(validator, "validate_syntax") as mock_syntax,
+            patch.object(validator, "validate_types") as mock_types,
+            patch.object(validator, "validate_linting") as mock_lint,
+        ):
 
             mock_syntax.return_value = ValidationResult(is_valid=True)
             mock_types.return_value = ValidationResult(is_valid=False, errors=["Type error"])
@@ -74,9 +72,9 @@ class TestValidateMethod:
                 strategies=[
                     ValidationStrategy.SYNTAX,
                     ValidationStrategy.TYPE_CHECK,
-                    ValidationStrategy.LINT
+                    ValidationStrategy.LINT,
                 ],
-                file_path="test.py"
+                file_path="test.py",
             )
 
             assert len(result) == 3
@@ -89,14 +87,14 @@ class TestValidateMethod:
         """Test validation with tests strategy."""
         validator = CodeValidator()
 
-        with patch.object(validator, 'validate_tests') as mock_tests:
+        with patch.object(validator, "validate_tests") as mock_tests:
             mock_tests.return_value = ValidationResult(is_valid=True)
 
             result = await validator.validate(
                 code="def test(): pass",
                 language="python",
                 strategies=[ValidationStrategy.TESTS],
-                file_path="src/test.py"
+                file_path="src/test.py",
             )
 
             assert len(result) == 1
@@ -107,13 +105,11 @@ class TestValidateMethod:
         """Test validation with build strategy."""
         validator = CodeValidator()
 
-        with patch.object(validator, 'validate_build') as mock_build:
+        with patch.object(validator, "validate_build") as mock_build:
             mock_build.return_value = ValidationResult(is_valid=True)
 
             result = await validator.validate(
-                code="def test(): pass",
-                language="python",
-                strategies=[ValidationStrategy.BUILD]
+                code="def test(): pass", language="python", strategies=[ValidationStrategy.BUILD]
             )
 
             assert len(result) == 1
@@ -125,9 +121,7 @@ class TestValidateMethod:
         validator = CodeValidator()
 
         result = await validator.validate(
-            code="def test(): pass",
-            language="python",
-            strategies=[ValidationStrategy.CUSTOM]
+            code="def test(): pass", language="python", strategies=[ValidationStrategy.CUSTOM]
         )
 
         assert len(result) == 1
@@ -144,8 +138,7 @@ class TestValidateSyntax:
         validator = CodeValidator()
 
         result = await validator.validate_syntax(
-            code="def hello_world():\n    return 'Hello, World!'",
-            language="python"
+            code="def hello_world():\n    return 'Hello, World!'", language="python"
         )
 
         assert result.is_valid is True
@@ -160,7 +153,7 @@ class TestValidateSyntax:
 
         result = await validator.validate_syntax(
             code="def hello_world(\n    return 'Hello, World!'",  # Missing closing parenthesis
-            language="python"
+            language="python",
         )
 
         assert result.is_valid is False
@@ -188,8 +181,7 @@ class TestValidateSyntax:
         validator = CodeValidator()
 
         result = await validator.validate_syntax(
-            code="function test() { return true; }",
-            language="javascript"
+            code="function test() { return true; }", language="javascript"
         )
 
         assert result.is_valid is True
@@ -226,17 +218,13 @@ class TestValidateTypes:
         """Test type validation with valid code."""
         validator = CodeValidator()
 
-        with patch.object(validator, '_run_subprocess') as mock_run:
-            mock_run.return_value = {
-                "returncode": 0,
-                "stdout": "",
-                "stderr": ""
-            }
+        with patch.object(validator, "_run_subprocess") as mock_run:
+            mock_run.return_value = {"returncode": 0, "stdout": "", "stderr": ""}
 
             result = await validator.validate_types(
                 code="def greet(name: str) -> str:\n    return f'Hello, {name}!'",
                 language="python",
-                file_path="test.py"
+                file_path="test.py",
             )
 
             assert result.is_valid is True
@@ -248,17 +236,20 @@ class TestValidateTypes:
         """Test type validation with type errors."""
         validator = CodeValidator()
 
-        with patch.object(validator, '_run_subprocess') as mock_run:
+        with patch.object(validator, "_run_subprocess") as mock_run:
             mock_run.return_value = {
                 "returncode": 1,
-                "stdout": "test.py:2: error: Incompatible return value type (got \"int\", expected \"str\")\n",
-                "stderr": ""
+                "stdout": (
+                    'test.py:2: error: Incompatible return value type '
+                    '(got "int", expected "str")\n'
+                ),
+                "stderr": "",
             }
 
             result = await validator.validate_types(
                 code="def greet(name: str) -> str:\n    return 42",  # Type mismatch
                 language="python",
-                file_path="test.py"
+                file_path="test.py",
             )
 
             assert result.is_valid is False
@@ -270,17 +261,17 @@ class TestValidateTypes:
         """Test type validation with warnings."""
         validator = CodeValidator()
 
-        with patch.object(validator, '_run_subprocess') as mock_run:
+        with patch.object(validator, "_run_subprocess") as mock_run:
             mock_run.return_value = {
                 "returncode": 0,  # mypy returns 0 even with warnings
                 "stdout": "test.py:1: warning: Call to untyped function\n",
-                "stderr": ""
+                "stderr": "",
             }
 
             result = await validator.validate_types(
                 code="def test():\n    return untyped_function()",
                 language="python",
-                file_path="test.py"
+                file_path="test.py",
             )
 
             assert result.is_valid is True
@@ -292,13 +283,10 @@ class TestValidateTypes:
         """Test type validation when mypy is not installed."""
         validator = CodeValidator()
 
-        with patch.object(validator, '_run_subprocess') as mock_run:
+        with patch.object(validator, "_run_subprocess") as mock_run:
             mock_run.side_effect = FileNotFoundError()
 
-            result = await validator.validate_types(
-                code="def test(): pass",
-                language="python"
-            )
+            result = await validator.validate_types(code="def test(): pass", language="python")
 
             assert result.is_valid is True
             assert len(result.errors) == 0
@@ -311,8 +299,7 @@ class TestValidateTypes:
         validator = CodeValidator()
 
         result = await validator.validate_types(
-            code="function test() { return true; }",
-            language="javascript"
+            code="function test() { return true; }", language="javascript"
         )
 
         assert result.is_valid is True
@@ -325,8 +312,10 @@ class TestValidateTypes:
         """Test that temporary files are cleaned up."""
         validator = CodeValidator()
 
-        with patch.object(validator, '_run_subprocess') as mock_run, \
-             patch('pathlib.Path.unlink') as mock_unlink:
+        with (
+            patch.object(validator, "_run_subprocess") as mock_run,
+            patch("pathlib.Path.unlink") as mock_unlink,
+        ):
 
             mock_run.return_value = {"returncode": 0, "stdout": "", "stderr": ""}
 
@@ -344,17 +333,13 @@ class TestValidateLinting:
         """Test linting validation with valid code."""
         validator = CodeValidator()
 
-        with patch.object(validator, '_run_subprocess') as mock_run:
-            mock_run.return_value = {
-                "returncode": 0,
-                "stdout": "",
-                "stderr": ""
-            }
+        with patch.object(validator, "_run_subprocess") as mock_run:
+            mock_run.return_value = {"returncode": 0, "stdout": "", "stderr": ""}
 
             result = await validator.validate_linting(
                 code="def greet(name: str) -> str:\n    return f'Hello, {name}!'",
                 language="python",
-                file_path="test.py"
+                file_path="test.py",
             )
 
             assert result.is_valid is True
@@ -366,17 +351,17 @@ class TestValidateLinting:
         """Test linting validation with lint errors."""
         validator = CodeValidator()
 
-        with patch.object(validator, '_run_subprocess') as mock_run:
+        with patch.object(validator, "_run_subprocess") as mock_run:
             mock_run.return_value = {
                 "returncode": 1,
                 "stdout": "test.py:1:1: E302 expected 2 blank lines\n",
-                "stderr": ""
+                "stderr": "",
             }
 
             result = await validator.validate_linting(
                 code="def test(): pass",  # Missing blank lines
                 language="python",
-                file_path="test.py"
+                file_path="test.py",
             )
 
             assert result.is_valid is False
@@ -388,17 +373,15 @@ class TestValidateLinting:
         """Test linting validation with warnings."""
         validator = CodeValidator()
 
-        with patch.object(validator, '_run_subprocess') as mock_run:
+        with patch.object(validator, "_run_subprocess") as mock_run:
             mock_run.return_value = {
                 "returncode": 1,
                 "stdout": "test.py:1:80: W503 line break before binary operator\n",
-                "stderr": ""
+                "stderr": "",
             }
 
             result = await validator.validate_linting(
-                code="x = 1 + \\\n    2",
-                language="python",
-                file_path="test.py"
+                code="x = 1 + \\\n    2", language="python", file_path="test.py"
             )
 
             assert result.is_valid is True  # Warnings don't make it invalid
@@ -410,13 +393,10 @@ class TestValidateLinting:
         """Test linting validation when flake8 is not installed."""
         validator = CodeValidator()
 
-        with patch.object(validator, '_run_subprocess') as mock_run:
+        with patch.object(validator, "_run_subprocess") as mock_run:
             mock_run.side_effect = FileNotFoundError()
 
-            result = await validator.validate_linting(
-                code="def test(): pass",
-                language="python"
-            )
+            result = await validator.validate_linting(code="def test(): pass", language="python")
 
             assert result.is_valid is True
             assert len(result.errors) == 0
@@ -429,8 +409,7 @@ class TestValidateLinting:
         validator = CodeValidator()
 
         result = await validator.validate_linting(
-            code="function test() { return true; }",
-            language="javascript"
+            code="function test() { return true; }", language="javascript"
         )
 
         assert result.is_valid is True
@@ -459,7 +438,7 @@ class TestValidateTests:
         """Test test validation when no test file is found."""
         validator = CodeValidator()
 
-        with patch.object(validator, '_find_test_file') as mock_find:
+        with patch.object(validator, "_find_test_file") as mock_find:
             mock_find.return_value = None
 
             result = await validator.validate_tests("src/nonexistent.py")
@@ -474,14 +453,16 @@ class TestValidateTests:
         """Test test validation with passing tests."""
         validator = CodeValidator()
 
-        with patch.object(validator, '_find_test_file') as mock_find, \
-             patch.object(validator, '_run_subprocess') as mock_run:
+        with (
+            patch.object(validator, "_find_test_file") as mock_find,
+            patch.object(validator, "_run_subprocess") as mock_run,
+        ):
 
             mock_find.return_value = Path("tests/test_src.py")
             mock_run.return_value = {
                 "returncode": 0,
                 "stdout": "tests/test_src.py::test_func PASSED\n",
-                "stderr": ""
+                "stderr": "",
             }
 
             result = await validator.validate_tests("src/test.py")
@@ -496,14 +477,19 @@ class TestValidateTests:
         """Test test validation with failing tests."""
         validator = CodeValidator()
 
-        with patch.object(validator, '_find_test_file') as mock_find, \
-             patch.object(validator, '_run_subprocess') as mock_run:
+        with (
+            patch.object(validator, "_find_test_file") as mock_find,
+            patch.object(validator, "_run_subprocess") as mock_run,
+        ):
 
             mock_find.return_value = Path("tests/test_src.py")
             mock_run.return_value = {
                 "returncode": 1,
-                "stdout": "tests/test_src.py::test_func FAILED\nAssertionError: Expected True but got False\n",
-                "stderr": ""
+                "stdout": (
+                    "tests/test_src.py::test_func FAILED\n"
+                    "AssertionError: Expected True but got False\n"
+                ),
+                "stderr": "",
             }
 
             result = await validator.validate_tests("src/test.py")
@@ -517,8 +503,10 @@ class TestValidateTests:
         """Test test validation when pytest is not installed."""
         validator = CodeValidator()
 
-        with patch.object(validator, '_find_test_file') as mock_find, \
-             patch.object(validator, '_run_subprocess') as mock_run:
+        with (
+            patch.object(validator, "_find_test_file") as mock_find,
+            patch.object(validator, "_run_subprocess") as mock_run,
+        ):
 
             mock_find.return_value = Path("tests/test_src.py")
             mock_run.side_effect = FileNotFoundError()
@@ -535,14 +523,16 @@ class TestValidateTests:
         """Test test validation with timeout."""
         validator = CodeValidator()
 
-        with patch.object(validator, '_find_test_file') as mock_find, \
-             patch.object(validator, '_run_subprocess') as mock_run:
+        with (
+            patch.object(validator, "_find_test_file") as mock_find,
+            patch.object(validator, "_run_subprocess") as mock_run,
+        ):
 
             mock_find.return_value = Path("tests/test_src.py")
             mock_run.return_value = {
                 "returncode": -1,
                 "stdout": "",
-                "stderr": "Command timed out after 60s"
+                "stderr": "Command timed out after 60s",
             }
 
             result = await validator.validate_tests("src/test.py")
@@ -560,15 +550,13 @@ class TestValidateBuild:
         """Test build validation with poetry configuration."""
         validator = CodeValidator()
 
-        with patch('pathlib.Path.exists') as mock_exists, \
-             patch.object(validator, '_run_subprocess') as mock_run:
+        with (
+            patch("pathlib.Path.exists") as mock_exists,
+            patch.object(validator, "_run_subprocess") as mock_run,
+        ):
 
             mock_exists.return_value = True
-            mock_run.return_value = {
-                "returncode": 0,
-                "stdout": "All set!\n",
-                "stderr": ""
-            }
+            mock_run.return_value = {"returncode": 0, "stdout": "All set!\n", "stderr": ""}
 
             result = await validator.validate_build()
 
@@ -581,15 +569,17 @@ class TestValidateBuild:
         """Test build validation with poetry check failure."""
         validator = CodeValidator()
 
-        with patch('pathlib.Path.exists') as mock_exists, \
-             patch.object(validator, '_run_subprocess') as mock_run:
+        with (
+            patch("pathlib.Path.exists") as mock_exists,
+            patch.object(validator, "_run_subprocess") as mock_run,
+        ):
 
             # pyproject.toml exists
             mock_exists.side_effect = lambda: True
             mock_run.return_value = {
                 "returncode": 1,
                 "stdout": "Error: pyproject.toml is invalid\n",
-                "stderr": ""
+                "stderr": "",
             }
 
             result = await validator.validate_build()
@@ -603,19 +593,17 @@ class TestValidateBuild:
         """Test build validation with Makefile."""
         validator = CodeValidator()
 
-        with patch('pathlib.Path.exists') as mock_exists, \
-             patch.object(validator, '_run_subprocess') as mock_run:
+        with (
+            patch("pathlib.Path.exists") as mock_exists,
+            patch.object(validator, "_run_subprocess") as mock_run,
+        ):
 
             # pyproject.toml doesn't exist, but Makefile does
             def exists_side_effect():
-                return str(mock_exists.call_args[0][0]).endswith('Makefile')
+                return str(mock_exists.call_args[0][0]).endswith("Makefile")
 
             mock_exists.side_effect = exists_side_effect
-            mock_run.return_value = {
-                "returncode": 0,
-                "stdout": "",
-                "stderr": ""
-            }
+            mock_run.return_value = {"returncode": 0, "stdout": "", "stderr": ""}
 
             result = await validator.validate_build()
 
@@ -627,7 +615,7 @@ class TestValidateBuild:
         """Test build validation with no build configuration."""
         validator = CodeValidator()
 
-        with patch('pathlib.Path.exists') as mock_exists:
+        with patch("pathlib.Path.exists") as mock_exists:
             mock_exists.return_value = False
 
             result = await validator.validate_build()
@@ -646,16 +634,11 @@ class TestValidateCustom:
         """Test custom validation with success."""
         validator = CodeValidator()
 
-        with patch.object(validator, '_run_subprocess') as mock_run:
-            mock_run.return_value = {
-                "returncode": 0,
-                "stdout": "Validation passed\n",
-                "stderr": ""
-            }
+        with patch.object(validator, "_run_subprocess") as mock_run:
+            mock_run.return_value = {"returncode": 0, "stdout": "Validation passed\n", "stderr": ""}
 
             result = await validator.validate_custom(
-                script="echo 'Checking code...'",
-                code="def test(): pass"
+                script="echo 'Checking code...'", code="def test(): pass"
             )
 
             assert result.is_valid is True
@@ -667,16 +650,15 @@ class TestValidateCustom:
         """Test custom validation with failure."""
         validator = CodeValidator()
 
-        with patch.object(validator, '_run_subprocess') as mock_run:
+        with patch.object(validator, "_run_subprocess") as mock_run:
             mock_run.return_value = {
                 "returncode": 1,
                 "stdout": "Validation failed:\n- Missing docstring\n- Type hints required\n",
-                "stderr": ""
+                "stderr": "",
             }
 
             result = await validator.validate_custom(
-                script="check_code.sh",
-                code="def test(): pass"
+                script="check_code.sh", code="def test(): pass"
             )
 
             assert result.is_valid is False
@@ -688,17 +670,14 @@ class TestValidateCustom:
         """Test custom validation with stderr output."""
         validator = CodeValidator()
 
-        with patch.object(validator, '_run_subprocess') as mock_run:
+        with patch.object(validator, "_run_subprocess") as mock_run:
             mock_run.return_value = {
                 "returncode": 1,
                 "stdout": "",
-                "stderr": "Error: Cannot validate code\nInvalid syntax at line 5\n"
+                "stderr": "Error: Cannot validate code\nInvalid syntax at line 5\n",
             }
 
-            result = await validator.validate_custom(
-                script="validate.sh",
-                code="invalid code"
-            )
+            result = await validator.validate_custom(script="validate.sh", code="invalid code")
 
             assert result.is_valid is False
             assert len(result.errors) == 2
@@ -713,7 +692,7 @@ class TestRunSubprocess:
         """Test successful subprocess execution."""
         validator = CodeValidator()
 
-        with patch('asyncio.create_subprocess_exec') as mock_create:
+        with patch("asyncio.create_subprocess_exec") as mock_create:
             mock_process = MagicMock()
             mock_process.returncode = 0
             mock_process.communicate.return_value = (b"output", b"")
@@ -731,17 +710,14 @@ class TestRunSubprocess:
         """Test subprocess execution with input data."""
         validator = CodeValidator()
 
-        with patch('asyncio.create_subprocess_exec') as mock_create:
+        with patch("asyncio.create_subprocess_exec") as mock_create:
             mock_process = MagicMock()
             mock_process.returncode = 0
             mock_process.communicate.return_value = (b"processed", b"")
             mock_create.return_value.__aenter__ = AsyncMock(return_value=mock_process)
             mock_create.return_value.__aexit__ = AsyncMock(return_value=None)
 
-            result = await validator._run_subprocess(
-                ["cat"],
-                input_data="test input"
-            )
+            result = await validator._run_subprocess(["cat"], input_data="test input")
 
             assert result["returncode"] == 0
             assert result["stdout"] == "processed"
@@ -751,7 +727,7 @@ class TestRunSubprocess:
         """Test subprocess execution with timeout."""
         validator = CodeValidator()
 
-        with patch('asyncio.create_subprocess_exec') as mock_create:
+        with patch("asyncio.create_subprocess_exec") as mock_create:
             mock_process = MagicMock()
             mock_process.kill = MagicMock()
 
@@ -763,10 +739,7 @@ class TestRunSubprocess:
             mock_create.return_value.__aenter__ = AsyncMock(return_value=mock_process)
             mock_create.return_value.__aexit__ = AsyncMock(return_value=None)
 
-            result = await validator._run_subprocess(
-                ["sleep", "10"],
-                timeout=1
-            )
+            result = await validator._run_subprocess(["sleep", "10"], timeout=1)
 
             assert result["returncode"] == -1
             assert "timed out" in result["stderr"]
@@ -777,7 +750,7 @@ class TestRunSubprocess:
         """Test subprocess execution with exception."""
         validator = CodeValidator()
 
-        with patch('asyncio.create_subprocess_exec') as mock_create:
+        with patch("asyncio.create_subprocess_exec") as mock_create:
             mock_create.side_effect = Exception("Process creation failed")
 
             result = await validator._run_subprocess(["invalid_command"])
@@ -888,13 +861,13 @@ class TestGetValidationSummary:
             ValidationResult(
                 is_valid=False,
                 errors=["Type error 1", "Type error 2"],
-                strategy=ValidationStrategy.TYPE_CHECK
+                strategy=ValidationStrategy.TYPE_CHECK,
             ),
             ValidationResult(
                 is_valid=False,
                 errors=["Lint error"],
                 warnings=["Lint warning"],
-                strategy=ValidationStrategy.LINT
+                strategy=ValidationStrategy.LINT,
             ),
         ]
 
@@ -911,7 +884,9 @@ class TestGetValidationSummary:
 
         results = [
             ValidationResult(is_valid=True, strategy=ValidationStrategy.SYNTAX, execution_time=0.1),
-            ValidationResult(is_valid=True, strategy=ValidationStrategy.TYPE_CHECK, execution_time=0.5),
+            ValidationResult(
+                is_valid=True, strategy=ValidationStrategy.TYPE_CHECK, execution_time=0.5
+            ),
             ValidationResult(is_valid=True, strategy=ValidationStrategy.LINT, execution_time=0.2),
         ]
 
@@ -929,13 +904,11 @@ class TestEdgeCases:
         """Test validation handles exceptions gracefully."""
         validator = CodeValidator()
 
-        with patch.object(validator, 'validate_syntax') as mock_syntax:
+        with patch.object(validator, "validate_syntax") as mock_syntax:
             mock_syntax.side_effect = Exception("Unexpected error")
 
-            result = await validator.validate(
-                code="def test(): pass",
-                language="python",
-                strategies=[ValidationStrategy.SYNTAX]
+            await validator.validate(
+                code="def test(): pass", language="python", strategies=[ValidationStrategy.SYNTAX]
             )
 
             # Should not crash, but the specific exception handling
@@ -946,17 +919,14 @@ class TestEdgeCases:
         """Test type validation with unparseable mypy output."""
         validator = CodeValidator()
 
-        with patch.object(validator, '_run_subprocess') as mock_run:
+        with patch.object(validator, "_run_subprocess") as mock_run:
             mock_run.return_value = {
                 "returncode": 1,
                 "stdout": "Invalid output format\nNo proper error format\n",
-                "stderr": ""
+                "stderr": "",
             }
 
-            result = await validator.validate_types(
-                code="def test(): pass",
-                language="python"
-            )
+            result = await validator.validate_types(code="def test(): pass", language="python")
 
             assert result.is_valid is False
             # Should handle the output gracefully
@@ -966,17 +936,14 @@ class TestEdgeCases:
         """Test linting validation with unparseable flake8 output."""
         validator = CodeValidator()
 
-        with patch.object(validator, '_run_subprocess') as mock_run:
+        with patch.object(validator, "_run_subprocess") as mock_run:
             mock_run.return_value = {
                 "returncode": 1,
                 "stdout": "Weird output format\nNot standard flake8\n",
-                "stderr": ""
+                "stderr": "",
             }
 
-            result = await validator.validate_linting(
-                code="def test(): pass",
-                language="python"
-            )
+            result = await validator.validate_linting(code="def test(): pass", language="python")
 
             # Should classify as warnings since it doesn't match error pattern
             assert len(result.warnings) > 0
@@ -986,14 +953,14 @@ class TestEdgeCases:
         """Test test validation with nonexistent project root."""
         validator = CodeValidator(project_root="/nonexistent")
 
-        with patch.object(validator, '_find_test_file') as mock_find:
+        with patch.object(validator, "_find_test_file") as mock_find:
             mock_find.return_value = Path("/nonexistent/test.py")
 
-            with patch.object(validator, '_run_subprocess') as mock_run:
+            with patch.object(validator, "_run_subprocess") as mock_run:
                 mock_run.return_value = {
                     "returncode": 1,
                     "stdout": "",
-                    "stderr": "No such file or directory"
+                    "stderr": "No such file or directory",
                 }
 
                 result = await validator.validate_tests("test.py")

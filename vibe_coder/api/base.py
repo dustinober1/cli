@@ -176,7 +176,11 @@ class BaseApiClient(ABC):
             if not isinstance(message, ApiMessage):
                 raise ValueError(f"Message {i} is not a valid ApiMessage")
             # Relax validation for tool messages or messages with tool calls
-            if not message.content.strip() and not message.tool_calls and message.role.value != "tool":
+            if (
+                not message.content.strip()
+                and not message.tool_calls
+                and message.role.value != "tool"
+            ):
                 # Allow empty content if there are tool calls or if it is a tool response (though usually tool response has content)
                 raise ValueError(f"Message {i} has empty content")
 

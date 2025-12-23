@@ -74,15 +74,30 @@ Examples:
             elif environment == "kubernetes":
                 return await self._generate_k8s_config(context, file_ops, project_info, platform)
             elif environment == "serverless":
-                return await self._generate_serverless_config(context, file_ops, project_info, platform, domain)
+                return await self._generate_serverless_config(
+                    context, file_ops, project_info, platform, domain
+                )
             elif environment == "static":
-                return await self._generate_static_config(context, file_ops, project_info, platform, domain)
+                return await self._generate_static_config(
+                    context, file_ops, project_info, platform, domain
+                )
             elif environment == "ci-cd":
                 return await self._generate_cicd_config(context, file_ops, project_info, platform)
             elif environment == "terraform":
-                return await self._generate_terraform_config(context, file_ops, project_info, platform)
+                return await self._generate_terraform_config(
+                    context, file_ops, project_info, platform
+                )
             else:
-                return await self._generate_app_config(context, file_ops, project_info, environment, platform, database, domain, ssl_enabled)
+                return await self._generate_app_config(
+                    context,
+                    file_ops,
+                    project_info,
+                    environment,
+                    platform,
+                    database,
+                    domain,
+                    ssl_enabled,
+                )
 
         except Exception as e:
             return f"Error generating deployment config: {e}"
@@ -100,7 +115,7 @@ Examples:
             "has_package_json": False,
             "has_requirements": False,
             "frontend": False,
-            "backend": True
+            "backend": True,
         }
 
         # Scan files
@@ -178,7 +193,13 @@ Examples:
 
         return info
 
-    async def _generate_docker_config(self, context: CommandContext, file_ops: FileOperations, project_info: dict, platform: Optional[str]) -> str:
+    async def _generate_docker_config(
+        self,
+        context: CommandContext,
+        file_ops: FileOperations,
+        project_info: dict,
+        platform: Optional[str],
+    ) -> str:
         """Generate Docker configuration."""
         configs = []
 
@@ -270,12 +291,12 @@ CMD ["./{project_info['name']}"]"""
                     "ports": [f"{project_info.get('port', 8000)}:{project_info.get('port', 8000)}"],
                     "environment": {
                         "ENVIRONMENT": "development",
-                        "PORT": str(project_info.get('port', 8000))
+                        "PORT": str(project_info.get("port", 8000)),
                     },
                     "volumes": ["./app:/app"],
-                    "restart": "unless-stopped"
+                    "restart": "unless-stopped",
                 }
-            }
+            },
         }
 
         # Add database if applicable
@@ -285,10 +306,10 @@ CMD ["./{project_info['name']}"]"""
                 "environment": {
                     "POSTGRES_DB": f"{project_info['name']}_db",
                     "POSTGRES_USER": "user",
-                    "POSTGRES_PASSWORD": "password"
+                    "POSTGRES_PASSWORD": "password",
                 },
                 "volumes": ["postgres_data:/var/lib/postgresql/data"],
-                "ports": ["5432:5432"]
+                "ports": ["5432:5432"],
             }
             compose["volumes"] = {"postgres_data": None}
 
@@ -339,12 +360,18 @@ CMD ["./{project_info['name']}"]"""
             "",
             "# OS",
             ".DS_Store",
-            "Thumbs.db"
+            "Thumbs.db",
         ]
 
         return "\n".join(patterns)
 
-    async def _generate_k8s_config(self, context: CommandContext, file_ops: FileOperations, project_info: dict, platform: Optional[str]) -> str:
+    async def _generate_k8s_config(
+        self,
+        context: CommandContext,
+        file_ops: FileOperations,
+        project_info: dict,
+        platform: Optional[str],
+    ) -> str:
         """Generate Kubernetes configuration."""
         configs = []
 
@@ -352,60 +379,41 @@ CMD ["./{project_info['name']}"]"""
         deployment = {
             "apiVersion": "apps/v1",
             "kind": "Deployment",
-            "metadata": {
-                "name": project_info["name"],
-                "labels": {
-                    "app": project_info["name"]
-                }
-            },
+            "metadata": {"name": project_info["name"], "labels": {"app": project_info["name"]}},
             "spec": {
                 "replicas": 3,
-                "selector": {
-                    "matchLabels": {
-                        "app": project_info["name"]
-                    }
-                },
+                "selector": {"matchLabels": {"app": project_info["name"]}},
                 "template": {
-                    "metadata": {
-                        "labels": {
-                            "app": project_info["name"]
-                        }
-                    },
+                    "metadata": {"labels": {"app": project_info["name"]}},
                     "spec": {
-                        "containers": [{
-                            "name": project_info["name"],
-                            "image": f"{project_info['name']}:latest",
-                            "ports": [{
-                                "containerPort": project_info.get('port', 8000)
-                            }],
-                            "env": [
-                                {"name": "ENVIRONMENT", "value": "production"},
-                                {"name": "PORT", "value": str(project_info.get('port', 8000))}
-                            ]
-                        }]
-                    }
-                }
-            }
+                        "containers": [
+                            {
+                                "name": project_info["name"],
+                                "image": f"{project_info['name']}:latest",
+                                "ports": [{"containerPort": project_info.get("port", 8000)}],
+                                "env": [
+                                    {"name": "ENVIRONMENT", "value": "production"},
+                                    {"name": "PORT", "value": str(project_info.get("port", 8000))},
+                                ],
+                            }
+                        ]
+                    },
+                },
+            },
         }
 
         # Service
         service = {
             "apiVersion": "v1",
             "kind": "Service",
-            "metadata": {
-                "name": f"{project_info['name']}-service"
-            },
+            "metadata": {"name": f"{project_info['name']}-service"},
             "spec": {
-                "selector": {
-                    "app": project_info["name"]
-                },
-                "ports": [{
-                    "protocol": "TCP",
-                    "port": 80,
-                    "targetPort": project_info.get('port', 8000)
-                }],
-                "type": "LoadBalancer"
-            }
+                "selector": {"app": project_info["name"]},
+                "ports": [
+                    {"protocol": "TCP", "port": 80, "targetPort": project_info.get("port", 8000)}
+                ],
+                "type": "LoadBalancer",
+            },
         }
 
         # Save configs
@@ -426,7 +434,14 @@ To deploy:
 
 Note: Update the image name in deployment.yaml to match your container registry."""
 
-    async def _generate_serverless_config(self, context: CommandContext, file_ops: FileOperations, project_info: dict, platform: Optional[str], domain: Optional[str]) -> str:
+    async def _generate_serverless_config(
+        self,
+        context: CommandContext,
+        file_ops: FileOperations,
+        project_info: dict,
+        platform: Optional[str],
+        domain: Optional[str],
+    ) -> str:
         """Generate serverless configuration."""
         if platform == "aws" or platform is None:
             # AWS Lambda
@@ -456,27 +471,28 @@ Requirements:
                 "name": "aws",
                 "runtime": "nodejs18.x" if project_info["type"] == "nodejs" else "python3.9",
                 "region": "us-east-1",
-                "stage": "dev"
+                "stage": "dev",
             },
             "functions": {
                 "api": {
-                    "handler": "handler.handler" if project_info["type"] == "nodejs" else "main.handler",
-                    "events": [
-                        {
-                            "http": {
-                                "path": "/{proxy+}",
-                                "method": "any",
-                                "cors": True
-                            }
-                        }
-                    ]
+                    "handler": (
+                        "handler.handler" if project_info["type"] == "nodejs" else "main.handler"
+                    ),
+                    "events": [{"http": {"path": "/{proxy+}", "method": "any", "cors": True}}],
                 }
-            }
+            },
         }
 
         return self._dict_to_yaml(config)
 
-    async def _generate_static_config(self, context: CommandContext, file_ops: FileOperations, project_info: dict, platform: Optional[str], domain: Optional[str]) -> str:
+    async def _generate_static_config(
+        self,
+        context: CommandContext,
+        file_ops: FileOperations,
+        project_info: dict,
+        platform: Optional[str],
+        domain: Optional[str],
+    ) -> str:
         """Generate static site hosting configuration."""
         configs = []
 
@@ -484,12 +500,14 @@ Requirements:
             # Netlify configuration
             netlify_config = {
                 "build": {
-                    "command": "npm run build" if project_info["has_package_json"] else "echo 'No build command'",
-                    "publish": "dist"
+                    "command": (
+                        "npm run build"
+                        if project_info["has_package_json"]
+                        else "echo 'No build command'"
+                    ),
+                    "publish": "dist",
                 },
-                "redirects": [
-                    {"from": "/*", "to": "/index.html", "status": 200}
-                ]
+                "redirects": [{"from": "/*", "to": "/index.html", "status": 200}],
             }
             await file_ops.write_file("netlify.toml", self._dict_to_yaml(netlify_config))
             configs.append("netlify.toml")
@@ -544,7 +562,13 @@ Deployment options:
 - GitHub Pages: Push to main branch to auto-deploy
 - Custom domain: Configure in hosting provider settings"""
 
-    async def _generate_cicd_config(self, context: CommandContext, file_ops: FileOperations, project_info: dict, platform: Optional[str]) -> str:
+    async def _generate_cicd_config(
+        self,
+        context: CommandContext,
+        file_ops: FileOperations,
+        project_info: dict,
+        platform: Optional[str],
+    ) -> str:
         """Generate CI/CD pipeline configuration."""
         if platform == "github" or platform is None:
             # GitHub Actions
@@ -610,7 +634,13 @@ The pipeline includes:
 ✅ Build verification
 ✅ Automatic deployment on main branch"""
 
-    async def _generate_terraform_config(self, context: CommandContext, file_ops: FileOperations, project_info: dict, platform: Optional[str]) -> str:
+    async def _generate_terraform_config(
+        self,
+        context: CommandContext,
+        file_ops: FileOperations,
+        project_info: dict,
+        platform: Optional[str],
+    ) -> str:
         """Generate Terraform infrastructure as code."""
         if platform == "aws" or platform is None:
             # AWS resources
@@ -728,7 +758,17 @@ Resources created:
 - CloudFront CDN
 - Route 53 DNS records"""
 
-    async def _generate_app_config(self, context: CommandContext, file_ops: FileOperations, project_info: dict, environment: str, platform: Optional[str], database: Optional[str], domain: Optional[str], ssl_enabled: bool) -> str:
+    async def _generate_app_config(
+        self,
+        context: CommandContext,
+        file_ops: FileOperations,
+        project_info: dict,
+        environment: str,
+        platform: Optional[str],
+        database: Optional[str],
+        domain: Optional[str],
+        ssl_enabled: bool,
+    ) -> str:
         """Generate general application configuration."""
         config_data = {
             "app": {
@@ -736,15 +776,15 @@ Resources created:
                 "environment": environment,
                 "port": project_info.get("port", 8000),
                 "domain": domain,
-                "ssl": ssl_enabled
+                "ssl": ssl_enabled,
             },
             "database": database,
             "platform": platform,
             "features": {
                 "monitoring": True if environment == "production" else False,
                 "logging": True,
-                "error_tracking": True if environment == "production" else False
-            }
+                "error_tracking": True if environment == "production" else False,
+            },
         }
 
         config_file = f"{environment}-config.json"
@@ -770,6 +810,7 @@ from ..registry import command_registry
 
 # Auto-register commands when module is imported
 command_registry.register(DeployCommand())
+
 
 def register():
     """Register all deployment commands."""

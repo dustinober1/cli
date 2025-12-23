@@ -1,9 +1,10 @@
 """
 Test main CLI entry point and command routing.
 """
+
 import os
 import tempfile
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import typer
@@ -80,9 +81,7 @@ class TestChatCommand:
         result = runner.invoke(app, ["chat"])
         assert result.exit_code == 0
         mock_chat_class.assert_called_once()
-        mock_command.run.assert_called_once_with(
-            provider_name=None, model=None, temperature=None
-        )
+        mock_command.run.assert_called_once_with(provider_name=None, model=None, temperature=None)
 
     @patch("vibe_coder.cli.ChatCommand")
     def test_chat_command_with_provider(self, mock_chat_class, runner):
@@ -119,9 +118,7 @@ class TestChatCommand:
 
         result = runner.invoke(app, ["chat", "--temperature", "0.5"])
         assert result.exit_code == 0
-        mock_command.run.assert_called_once_with(
-            provider_name=None, model=None, temperature=0.5
-        )
+        mock_command.run.assert_called_once_with(provider_name=None, model=None, temperature=0.5)
 
     @patch("vibe_coder.cli.ChatCommand")
     def test_chat_command_with_all_options(self, mock_chat_class, runner):
@@ -130,17 +127,13 @@ class TestChatCommand:
         mock_command.run.return_value = True
         mock_chat_class.return_value = mock_command
 
-        result = runner.invoke(app, [
-            "chat",
-            "--provider", "claude",
-            "--model", "claude-3-sonnet",
-            "--temperature", "0.8"
-        ])
+        result = runner.invoke(
+            app,
+            ["chat", "--provider", "claude", "--model", "claude-3-sonnet", "--temperature", "0.8"],
+        )
         assert result.exit_code == 0
         mock_command.run.assert_called_once_with(
-            provider_name="claude",
-            model="claude-3-sonnet",
-            temperature=0.8
+            provider_name="claude", model="claude-3-sonnet", temperature=0.8
         )
 
     @patch("vibe_coder.cli.ChatCommand")
@@ -327,7 +320,7 @@ class TestErrorHandling:
     def test_chat_temperature_out_of_range(self, runner):
         """Test chat command with temperature out of range."""
         # Note: This depends on how the validation is implemented
-        result = runner.invoke(app, ["chat", "--temperature", "5.0"])
+        runner.invoke(app, ["chat", "--temperature", "5.0"])
         # May or may not fail depending on implementation
         assert True  # Placeholder for actual test
 
@@ -340,3 +333,168 @@ class TestMainFunction:
         """Test main function calls app()."""
         main()
         mock_app.assert_called_once()
+
+
+class TestCliCoverage:
+    """Additional tests to improve CLI coverage."""
+
+    def test_chat_command_with_negative_temperature(self, runner):
+        """Test chat command with negative temperature."""
+        result = runner.invoke(app, ["chat", "--temperature", "-0.5"])
+        # Typer may or may not validate this range
+        assert result.exit_code in [0, 2]
+
+    @patch("vibe_coder.cli.ChatCommand")
+    def test_chat_command_with_asyncio_run(self, mock_chat_class, runner):
+        """Test that asyncio.run is called correctly."""
+        mock_command = AsyncMock()
+        mock_command.run.return_value = True
+        mock_chat_class.return_value = mock_command
+
+        with patch("vibe_coder.cli.asyncio.run") as mock_asyncio_run:
+            mock_asyncio_run.return_value = True
+            result = runner.invoke(app, ["chat"])
+            assert result.exit_code == 0
+            mock_asyncio_run.assert_called_once()
+
+    @patch("vibe_coder.cli.SetupCommand")
+    def test_setup_command_with_asyncio_run(self, mock_setup_class, runner):
+        """Test that asyncio.run is called correctly for setup."""
+        mock_command = AsyncMock()
+        mock_command.run.return_value = True
+        mock_setup_class.return_value = mock_command
+
+        with patch("vibe_coder.cli.asyncio.run") as mock_asyncio_run:
+            mock_asyncio_run.return_value = True
+            result = runner.invoke(app, ["setup"])
+            assert result.exit_code == 0
+            mock_asyncio_run.assert_called_once()
+
+    @patch("vibe_coder.cli.ConfigCommand")
+    def test_config_command_with_asyncio_run(self, mock_config_class, runner):
+        """Test that asyncio.run is called correctly for config."""
+        mock_command = AsyncMock()
+        mock_command.run.return_value = True
+        mock_config_class.return_value = mock_command
+
+        with patch("vibe_coder.cli.asyncio.run") as mock_asyncio_run:
+            mock_asyncio_run.return_value = True
+            result = runner.invoke(app, ["config", "list"])
+            assert result.exit_code == 0
+            mock_asyncio_run.assert_called_once()
+
+    @patch("vibe_coder.commands.test.TestCommand")
+    def test_test_command_with_asyncio_run(self, mock_test_class, runner):
+        """Test that asyncio.run is called correctly for test."""
+        mock_command = AsyncMock()
+        mock_command.run.return_value = True
+        mock_test_class.return_value = mock_command
+
+        with patch("vibe_coder.cli.asyncio.run") as mock_asyncio_run:
+            mock_asyncio_run.return_value = True
+            result = runner.invoke(app, ["test"])
+            assert result.exit_code == 0
+            mock_asyncio_run.assert_called_once()
+
+    def test_cli_callback_function(self, runner):
+        """Test the CLI callback function."""
+        # The callback function doesn't do anything, but test it's properly set up
+        result = runner.invoke(app, ["--help"])
+        assert result.exit_code == 0
+        assert "Vibe Coder - Your AI coding assistant" in result.stdout
+
+    def test_chat_command_short_options(self, runner):
+        """Test chat command with short option flags."""
+        with patch("vibe_coder.cli.ChatCommand") as mock_chat_class:
+            mock_command = AsyncMock()
+            mock_command.run.return_value = True
+            mock_chat_class.return_value = mock_command
+
+            result = runner.invoke(app, ["chat", "-p", "test", "-m", "gpt-4", "-t", "0.5"])
+            assert result.exit_code == 0
+            mock_command.run.assert_called_once_with(
+                provider_name="test", model="gpt-4", temperature=0.5
+            )
+
+    def test_config_command_all_actions(self, runner):
+        """Test config command with all valid actions."""
+        actions = ["list", "show", "add", "edit", "delete"]
+
+        for action in actions:
+            with patch("vibe_coder.cli.ConfigCommand") as mock_config_class:
+                mock_command = AsyncMock()
+                mock_command.run.return_value = True
+                mock_config_class.return_value = mock_command
+
+                args = ["config", action]
+                if action in ["show", "edit", "delete"]:
+                    args.append("test-provider")
+
+                result = runner.invoke(app, args)
+                assert result.exit_code == 0
+                expected_name = "test-provider" if action in ["show", "edit", "delete"] else None
+                mock_command.run.assert_called_once_with(action, expected_name)
+
+    def test_command_imports(self):
+        """Test that all command classes are imported correctly."""
+        # This test ensures the import statements are executed
+        from vibe_coder.commands.chat import ChatCommand
+        from vibe_coder.commands.config import ConfigCommand
+        from vibe_coder.commands.setup import SetupCommand
+        from vibe_coder.commands.test import TestCommand
+
+        assert ChatCommand is not None
+        assert ConfigCommand is not None
+        assert SetupCommand is not None
+        assert TestCommand is not None
+
+    def test_app_configuration(self):
+        """Test the Typer app configuration."""
+        assert app.info.name == "vibe-coder"
+        assert "A configurable CLI coding assistant" in app.info.help
+        assert app.rich_markup_mode == "rich"
+
+        # Check that commands are registered
+        command_names = [cmd.name for cmd in app.commands.values()]
+        assert "chat" in command_names
+        assert "setup" in command_names
+        assert "config" in command_names
+        assert "test" in command_names
+
+    def test_console_instance(self):
+        """Test that console instance is created."""
+        from rich.console import Console
+
+        from vibe_coder.cli import console
+
+        assert isinstance(console, Console)
+
+    @patch("vibe_coder.cli.ChatCommand")
+    def test_chat_exception_handling(self, mock_chat_class, runner):
+        """Test chat command exception handling."""
+        mock_command = AsyncMock()
+        mock_command.run.side_effect = Exception("Test exception")
+        mock_chat_class.return_value = mock_command
+
+        result = runner.invoke(app, ["chat"])
+        assert result.exit_code == 1
+
+    @patch("vibe_coder.cli.SetupCommand")
+    def test_setup_exception_handling(self, mock_setup_class, runner):
+        """Test setup command exception handling."""
+        mock_command = AsyncMock()
+        mock_command.run.side_effect = Exception("Test exception")
+        mock_setup_class.return_value = mock_command
+
+        result = runner.invoke(app, ["setup"])
+        assert result.exit_code == 1
+
+    @patch("vibe_coder.cli.ConfigCommand")
+    def test_config_exception_handling(self, mock_config_class, runner):
+        """Test config command exception handling."""
+        mock_command = AsyncMock()
+        mock_command.run.side_effect = Exception("Test exception")
+        mock_config_class.return_value = mock_command
+
+        result = runner.invoke(app, ["config", "list"])
+        assert result.exit_code == 1

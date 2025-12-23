@@ -75,7 +75,7 @@ class AnthropicClient(BaseApiClient):
             return self._format_error_response(e, "rate_limit")
         except anthropic.AuthenticationError as e:
             return self._format_error_response(e, "authentication")
-        except anthropic.NetworkError as e:
+        except anthropic.APIConnectionError as e:
             return self._format_error_response(e, "network")
         except Exception as e:
             return self._format_error_response(e, "unknown")
@@ -145,7 +145,7 @@ class AnthropicClient(BaseApiClient):
             return True
         except anthropic.AuthenticationError:
             return False
-        except anthropic.NetworkError:
+        except anthropic.APIConnectionError:
             return False
         except Exception:
             return False
@@ -199,37 +199,45 @@ class AnthropicClient(BaseApiClient):
                     # We might need to ensure they match Anthropic's 'tool_use' block format
                     for tc in message.tool_calls:
                         if isinstance(tc, dict):
-                             # Assuming tc is already in a compatible dict format or we convert it
-                             # Anthropic expects: {type: "tool_use", id: "...", name: "...", input: {...}}
-                             if tc.get("type") == "tool_use":
-                                 content.append(tc)
-                             elif tc.get("type") == "function": # OpenAI style
-                                 content.append({
-                                     "type": "tool_use",
-                                     "id": tc.get("id"),
-                                     "name": tc["function"]["name"],
-                                     "input": tc["function"]["arguments"] # Note: arguments in OpenAI is string, Anthropic needs dict
-                                     # This conversion is complex if arguments is string JSON.
-                                     # For now, we assume if we are using Anthropic, tool_calls came from Anthropic
-                                     # and are already in correct format, OR we need JSON parsing.
-                                 })
+                            # Assuming tc is already in a compatible dict format or we convert it
+                            # Anthropic expects: {type: "tool_use", id: "...", name: "...", input: {...}}
+                            if tc.get("type") == "tool_use":
+                                content.append(tc)
+                            elif tc.get("type") == "function":  # OpenAI style
+                                content.append(
+                                    {
+                                        "type": "tool_use",
+                                        "id": tc.get("id"),
+                                        "name": tc["function"]["name"],
+                                        "input": tc["function"][
+                                            "arguments"
+                                        ],  # Note: arguments in OpenAI is string, Anthropic needs dict
+                                        # This conversion is complex if arguments is string JSON.
+                                        # For now, we assume if we are using Anthropic, tool_calls came from Anthropic
+                                        # and are already in correct format, OR we need JSON parsing.
+                                    }
+                                )
 
                 if not content:
                     # Fallback for simple content string if no tool calls processed
-                     claude_messages.append({"role": "assistant", "content": message.content})
+                    claude_messages.append({"role": "assistant", "content": message.content})
                 else:
                     claude_messages.append({"role": "assistant", "content": content})
 
             elif message.role == MessageRole.TOOL:
                 # Tool result
-                claude_messages.append({
-                    "role": "user",
-                    "content": [{
-                        "type": "tool_result",
-                        "tool_use_id": message.tool_call_id,
-                        "content": message.content
-                    }]
-                })
+                claude_messages.append(
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": message.tool_call_id,
+                                "content": message.content,
+                            }
+                        ],
+                    }
+                )
 
         # Ensure we have at least one user message
         if not claude_messages:
@@ -270,16 +278,18 @@ class AnthropicClient(BaseApiClient):
 
                 # Check for tool usage
                 if hasattr(block, "type") and block.type == "tool_use":
-                    # Keep as ToolUseBlock object if it already is one
-                    tool_calls.append(block)
+                    # Convert ToolUseBlock object to dict
+                    tool_calls.append(
+                        {
+                            "id": getattr(block, "id", None),
+                            "type": "tool_use",
+                            "name": getattr(block, "name", None),
+                            "input": getattr(block, "input", {}),
+                        }
+                    )
                 elif isinstance(block, dict) and block.get("type") == "tool_use":
-                    # Convert dict to ToolUseBlock object
-                    tool_calls.append(ToolUseBlock(
-                        id=block.get("id"),
-                        name=block.get("name"),
-                        input=block.get("input", {}),
-                        type="tool_use"
-                    ))
+                    # Keep dict as is
+                    tool_calls.append(block)
 
         # Extract usage information
         usage = TokenUsage(
@@ -304,10 +314,7 @@ class AnthropicClient(BaseApiClient):
             finish_reason = reason_map.get(response.stop_reason, "unknown")
 
         result = ApiResponse(
-            content=content,
-            usage=usage,
-            finish_reason=finish_reason,
-            tool_calls=tool_calls
+            content=content, usage=usage, finish_reason=finish_reason, tool_calls=tool_calls
         )
 
         return result
@@ -323,16 +330,30 @@ class AnthropicClient(BaseApiClient):
         """
         error_type = "anthropic_error"
 
-        # Categorize error types
-        error_str = str(error).lower()
-        if "rate" in error_str:
+        # Categorize error types by checking actual error class
+        if isinstance(error, anthropic.RateLimitError):
             error_type = "rate_limit"
-        elif "token" in error_str:
-            error_type = "token_limit"
-        elif "model" in error_str:
-            error_type = "model_not_found"
-        elif "permission" in error_str:
+        elif isinstance(error, anthropic.AuthenticationError):
+            error_type = "authentication"
+        elif isinstance(error, anthropic.APIConnectionError):
+            error_type = "network"
+        elif isinstance(error, anthropic.APITimeoutError):
+            error_type = "timeout"
+        elif isinstance(error, anthropic.BadRequestError):
+            error_type = "bad_request"
+        elif isinstance(error, anthropic.PermissionDeniedError):
             error_type = "permission_denied"
+        else:
+            # Fallback to string matching for generic APIError
+            error_str = str(error).lower()
+            if "rate" in error_str:
+                error_type = "rate_limit"
+            elif "token" in error_str:
+                error_type = "token_limit"
+            elif "model" in error_str:
+                error_type = "model_not_found"
+            elif "permission" in error_str:
+                error_type = "permission_denied"
 
         return self._format_error_response(error, error_type)
 

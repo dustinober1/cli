@@ -7,8 +7,7 @@ and graph centrality.
 """
 
 from datetime import datetime, timedelta
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -176,9 +175,7 @@ class TestEntryPointScore:
         mock_mapper = MagicMock()
         mock_mapper._repo_map = MagicMock()
         mock_mapper._repo_map.entry_points = ["main.py", "cli.py"]
-        mock_mapper._repo_map.modules = {
-            "main.py": MagicMock()
-        }
+        mock_mapper._repo_map.modules = {"main.py": MagicMock()}
 
         scorer = ImportanceScorer(mock_mapper)
         score = scorer._entry_point_score("main.py")
@@ -210,16 +207,10 @@ class TestEntryPointScore:
 
         # Create file with main function
         main_func = FunctionSignature(
-            name="main",
-            module_path="module",
-            file_path="module.py",
-            line_start=1,
-            line_end=10
+            name="main", module_path="module", file_path="module.py", line_start=1, line_end=10
         )
 
-        mock_mapper._repo_map.modules = {
-            "module.py": MagicMock(functions=[main_func])
-        }
+        mock_mapper._repo_map.modules = {"module.py": MagicMock(functions=[main_func])}
 
         scorer = ImportanceScorer(mock_mapper)
         score = scorer._entry_point_score("module.py")
@@ -230,9 +221,7 @@ class TestEntryPointScore:
         mock_mapper = MagicMock()
         mock_mapper._repo_map = MagicMock()
         mock_mapper._repo_map.entry_points = []
-        mock_mapper._repo_map.modules = {
-            "utils.py": MagicMock(functions=[])
-        }
+        mock_mapper._repo_map.modules = {"utils.py": MagicMock(functions=[])}
 
         scorer = ImportanceScorer(mock_mapper)
         score = scorer._entry_point_score("utils.py")
@@ -247,9 +236,7 @@ class TestTestCoverageScore:
         mock_mapper = MagicMock()
         mock_mapper._repo_map = MagicMock()
         mock_mapper._repo_map.test_files = ["test_main.py", "test_utils.py"]
-        mock_mapper._repo_map.modules = {
-            "test_main.py": MagicMock()
-        }
+        mock_mapper._repo_map.modules = {"test_main.py": MagicMock()}
 
         scorer = ImportanceScorer(mock_mapper)
         score = scorer._test_coverage_score("test_main.py")
@@ -411,7 +398,7 @@ class TestGraphCentralityScore:
         scorer = ImportanceScorer(mock_mapper)
         score = scorer._graph_centrality_score("target.py")
         # 1 dependency + 1 dependent = 2 connections out of 3 possible
-        assert abs(score - (2/3)) < 0.01
+        assert abs(score - (2 / 3)) < 0.01
 
     def test_graph_centrality_no_connections(self):
         """Test graph centrality score for file with no connections."""
@@ -471,7 +458,7 @@ class TestContextBoost:
         scorer = ImportanceScorer(mock_mapper)
 
         # Mock dependency score
-        with patch.object(scorer, '_dependency_score', return_value=0.6):
+        with patch.object(scorer, "_dependency_score", return_value=0.6):
             context = {"target_file": "buggy.py", "operation": "fix"}
             base_score = 0.5
 
@@ -495,7 +482,7 @@ class TestContextBoost:
         scorer = ImportanceScorer(mock_mapper)
 
         # Mock dependency score
-        with patch.object(scorer, '_dependency_score', return_value=0.6):
+        with patch.object(scorer, "_dependency_score", return_value=0.6):
             context = {"operation": "refactor"}
             base_score = 0.5
 
@@ -519,18 +506,14 @@ class TestScoringIntegration:
             lines_of_code=100,
             functions=[
                 FunctionSignature(
-                    name="main",
-                    module_path="core",
-                    file_path="core.py",
-                    line_start=1,
-                    line_end=50
+                    name="main", module_path="core", file_path="core.py", line_start=1, line_end=50
                 )
             ],
             imports=["utils", "models"],
             dependencies={"utils.py", "models.py"},
             type_hints_coverage=0.8,
             has_docstring=True,
-            last_modified=(datetime.now() - timedelta(days=3)).isoformat()
+            last_modified=(datetime.now() - timedelta(days=3)).isoformat(),
         )
 
         mock_mapper._repo_map.modules = {"core.py": node}
@@ -576,7 +559,7 @@ class TestScoringIntegration:
             file_path="test.py",
             score=0.75,
             factors={"recency": 1.0},
-            last_calculated=datetime.now()
+            last_calculated=datetime.now(),
         )
         scorer._importance_cache["test.py"] = cached
 
@@ -596,11 +579,11 @@ class TestScoringIntegration:
             file_path="test.py",
             score=0.75,
             factors={"recency": 1.0},
-            last_calculated=datetime.now() - timedelta(minutes=10)  # 10 minutes ago
+            last_calculated=datetime.now() - timedelta(minutes=10),  # 10 minutes ago
         )
         scorer._importance_cache["test.py"] = cached
 
-        with patch.object(scorer, '_recency_score', return_value=0.5):
+        with patch.object(scorer, "_recency_score", return_value=0.5):
             score = await scorer.score_file("test.py")
             # Should recalculate, not use cached value
             assert score != 0.75
@@ -659,10 +642,7 @@ class TestCacheManagement:
         # Populate cache with factors
         factors = {"recency": 1.0, "dependencies": 0.5}
         cached = FileImportance(
-            file_path="test.py",
-            score=0.75,
-            factors=factors,
-            last_calculated=datetime.now()
+            file_path="test.py", score=0.75, factors=factors, last_calculated=datetime.now()
         )
         scorer._importance_cache["test.py"] = cached
 

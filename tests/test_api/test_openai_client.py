@@ -1,19 +1,16 @@
 """Test OpenAI API client implementation."""
 
 import os
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, Mock
-from typing import Any, Dict, List
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import openai
-from openai.types import chat
+import pytest
 from openai.types.chat import ChatCompletion, ChatCompletionMessage
-from openai.types.chat.chat_completion import Choice, Choice as ChatChoice
+from openai.types.chat.chat_completion import Choice
 
 from vibe_coder.api.openai_client import OpenAIClient
-from vibe_coder.types.api import ApiMessage, ApiResponse, MessageRole, TokenUsage
+from vibe_coder.types.api import ApiMessage, MessageRole
 from vibe_coder.types.config import AIProvider
-
 
 # Integration tests - only run with OPENAI_API_KEY
 pytest.importorskip("openai")
@@ -22,6 +19,53 @@ pytest.importorskip("openai")
 def has_openai_key():
     """Check if OpenAI API key is available for integration tests."""
     return bool(os.getenv("OPENAI_API_KEY"))
+
+
+def create_mock_openai_error(error_class, message: str):
+    """Helper to create mock OpenAI errors with proper parameters for SDK v1.x."""
+    from httpx import Request, Response
+
+    # Create a mock request and response for errors that need them
+    request = Request("POST", "https://api.openai.com/v1/chat/completions")
+    response = Response(
+        status_code=400,
+        request=request,
+        json={"error": {"message": message, "type": error_class.__name__}},
+    )
+    body = response.json()
+
+    # Different error classes have different required parameters
+    if error_class == openai.APIStatusError:
+        # APIStatusError requires response and body as keyword-only arguments
+        return error_class(message=message, response=response, body=body)
+    elif error_class == openai.APIError:
+        # APIError requires request and body as keyword-only arguments
+        return error_class(request=request, message=message, body=body)
+    elif error_class == openai.APIConnectionError:
+        # APIConnectionError requires request as keyword-only argument
+        return error_class(request=request, message=message)
+    elif error_class == openai.RateLimitError:
+        # RateLimitError is a subclass of APIStatusError, needs response and body
+        return error_class(message=message, response=response, body=body)
+    elif error_class == openai.AuthenticationError:
+        # AuthenticationError is a subclass of APIStatusError, needs response and body
+        return error_class(message=message, response=response, body=body)
+    else:
+        # For other errors, try with just the message
+        try:
+            return error_class(message=message)
+        except TypeError:
+            # Fallback: create a mock object with the message
+            mock_error = Mock()
+            mock_error.message = message
+            mock_error.__class__ = error_class
+            return mock_error
+
+
+async def mock_async_stream(chunks):
+    """Create an async iterator from a list of chunks."""
+    for chunk in chunks:
+        yield chunk
 
 
 class TestOpenAIClientUnit:
@@ -41,7 +85,7 @@ class TestOpenAIClientUnit:
     @pytest.fixture
     def mock_openai_client(self):
         """Create a mock OpenAI client."""
-        with patch('vibe_coder.api.openai_client.AsyncOpenAI') as mock:
+        with patch("vibe_coder.api.openai_client.AsyncOpenAI") as mock:
             mock_instance = AsyncMock()
             mock.return_value = mock_instance
             mock_instance.chat = AsyncMock()
@@ -57,7 +101,7 @@ class TestOpenAIClientUnit:
     @pytest.mark.asyncio
     async def test_initialization(self):
         """Test client initialization."""
-        with patch('vibe_coder.api.openai_client.AsyncOpenAI') as mock:
+        with patch("vibe_coder.api.openai_client.AsyncOpenAI") as mock:
             mock_instance = AsyncMock()
             mock.return_value = mock_instance
 
@@ -67,7 +111,7 @@ class TestOpenAIClientUnit:
                 api_key=self.provider.api_key,
                 base_url=self.provider.endpoint,
                 timeout=60.0,
-                max_retries=3
+                max_retries=3,
             )
             assert client.provider == self.provider
 
@@ -79,11 +123,8 @@ class TestOpenAIClientUnit:
         mock_response.choices = [
             Choice(
                 index=0,
-                message=ChatCompletionMessage(
-                    role="assistant",
-                    content="Test response"
-                ),
-                finish_reason="stop"
+                message=ChatCompletionMessage(role="assistant", content="Test response"),
+                finish_reason="stop",
             )
         ]
         mock_response.usage = MagicMock()
@@ -109,7 +150,11 @@ class TestOpenAIClientUnit:
         """Test sending request with system message."""
         mock_response = MagicMock(spec=ChatCompletion)
         mock_response.choices = [
-            Choice(index=0, message=ChatCompletionMessage(role="assistant", content="Response"), finish_reason="stop")
+            Choice(
+                index=0,
+                message=ChatCompletionMessage(role="assistant", content="Response"),
+                finish_reason="stop",
+            )
         ]
         mock_response.usage = MagicMock(prompt_tokens=15, completion_tokens=25, total_tokens=40)
 
@@ -117,24 +162,34 @@ class TestOpenAIClientUnit:
 
         messages = [
             ApiMessage(role=MessageRole.SYSTEM, content="System prompt"),
-            ApiMessage(role=MessageRole.USER, content="User message")
+            ApiMessage(role=MessageRole.USER, content="User message"),
         ]
         await client.send_request(messages)
 
         # Verify system message is first
         call_args = mock_openai_client.chat.completions.create.call_args
-        openai_messages = call_args[1]['messages']
-        assert openai_messages[0]['role'] == 'system'
-        assert openai_messages[0]['content'] == 'System prompt'
-        assert openai_messages[1]['role'] == 'user'
+        openai_messages = call_args[1]["messages"]
+        assert openai_messages[0]["role"] == "system"
+        assert openai_messages[0]["content"] == "System prompt"
+        assert openai_messages[1]["role"] == "user"
 
     @pytest.mark.asyncio
     async def test_send_request_with_tools(self, client, mock_openai_client):
         """Test sending request with tools."""
         mock_response = MagicMock(spec=ChatCompletion)
-        mock_response.choices = [Choice(index=0, message=ChatCompletionMessage(role="assistant", content=""), finish_reason="tool_calls")]
+        mock_response.choices = [
+            Choice(
+                index=0,
+                message=ChatCompletionMessage(role="assistant", content=""),
+                finish_reason="tool_calls",
+            )
+        ]
         mock_response.choices[0].message.tool_calls = [
-            {"id": "call_1", "type": "function", "function": {"name": "test_func", "arguments": "{}"}}
+            {
+                "id": "call_1",
+                "type": "function",
+                "function": {"name": "test_func", "arguments": "{}"},
+            }
         ]
         mock_response.usage = MagicMock(prompt_tokens=10, completion_tokens=20, total_tokens=30)
 
@@ -144,78 +199,100 @@ class TestOpenAIClientUnit:
         messages = [ApiMessage(role=MessageRole.USER, content="Use tool")]
         response = await client.send_request(messages, tools=tools)
 
-        assert response.tool_calls == [{"id": "call_1", "type": "function", "function": {"name": "test_func", "arguments": "{}"}}]
+        assert response.tool_calls == [
+            {
+                "id": "call_1",
+                "type": "function",
+                "function": {"name": "test_func", "arguments": "{}"},
+            }
+        ]
 
         call_args = mock_openai_client.chat.completions.create.call_args
-        assert call_args[1]['tools'] == tools
+        assert call_args[1]["tools"] == tools
 
     @pytest.mark.asyncio
     async def test_send_request_with_overrides(self, client, mock_openai_client):
         """Test sending request with parameter overrides."""
         mock_response = MagicMock(spec=ChatCompletion)
-        mock_response.choices = [Choice(index=0, message=ChatCompletionMessage(role="assistant", content="Response"), finish_reason="stop")]
+        mock_response.choices = [
+            Choice(
+                index=0,
+                message=ChatCompletionMessage(role="assistant", content="Response"),
+                finish_reason="stop",
+            )
+        ]
         mock_response.usage = MagicMock(prompt_tokens=10, completion_tokens=20, total_tokens=30)
 
         mock_openai_client.chat.completions.create.return_value = mock_response
 
         messages = [ApiMessage(role=MessageRole.USER, content="Test")]
         await client.send_request(
-            messages,
-            model="gpt-4",
-            temperature=0.5,
-            max_tokens=2000,
-            custom_param="value"
+            messages, model="gpt-4", temperature=0.5, max_tokens=2000, custom_param="value"
         )
 
         call_args = mock_openai_client.chat.completions.create.call_args
-        assert call_args[1]['model'] == "gpt-4"
-        assert call_args[1]['temperature'] == 0.5
-        assert call_args[1]['max_tokens'] == 2000
-        assert call_args[1]['custom_param'] == "value"
+        assert call_args[1]["model"] == "gpt-4"
+        assert call_args[1]["temperature"] == 0.5
+        assert call_args[1]["max_tokens"] == 2000
+        assert call_args[1]["custom_param"] == "value"
 
     @pytest.mark.asyncio
     async def test_send_request_with_tool_calls_in_message(self, client, mock_openai_client):
         """Test sending request with tool calls in assistant message."""
         mock_response = MagicMock(spec=ChatCompletion)
-        mock_response.choices = [Choice(index=0, message=ChatCompletionMessage(role="assistant", content=""), finish_reason="stop")]
+        mock_response.choices = [
+            Choice(
+                index=0,
+                message=ChatCompletionMessage(role="assistant", content=""),
+                finish_reason="stop",
+            )
+        ]
         mock_response.usage = MagicMock(prompt_tokens=10, completion_tokens=20, total_tokens=30)
 
         mock_openai_client.chat.completions.create.return_value = mock_response
 
-        tool_calls = [{"id": "call_1", "type": "function", "function": {"name": "test", "arguments": "{}"}}]
+        tool_calls = [
+            {"id": "call_1", "type": "function", "function": {"name": "test", "arguments": "{}"}}
+        ]
         messages = [
             ApiMessage(role=MessageRole.USER, content="Use tool"),
-            ApiMessage(role=MessageRole.ASSISTANT, content="", tool_calls=tool_calls)
+            ApiMessage(role=MessageRole.ASSISTANT, content="", tool_calls=tool_calls),
         ]
         await client.send_request(messages)
 
         call_args = mock_openai_client.chat.completions.create.call_args
-        openai_messages = call_args[1]['messages']
+        openai_messages = call_args[1]["messages"]
         assistant_msg = openai_messages[1]  # Skip system if present
-        assert assistant_msg['role'] == 'assistant'
-        assert assistant_msg['tool_calls'] == tool_calls
+        assert assistant_msg["role"] == "assistant"
+        assert assistant_msg["tool_calls"] == tool_calls
 
     @pytest.mark.asyncio
     async def test_send_request_with_tool_message(self, client, mock_openai_client):
         """Test sending request with tool response message."""
         mock_response = MagicMock(spec=ChatCompletion)
-        mock_response.choices = [Choice(index=0, message=ChatCompletionMessage(role="assistant", content="Final response"), finish_reason="stop")]
+        mock_response.choices = [
+            Choice(
+                index=0,
+                message=ChatCompletionMessage(role="assistant", content="Final response"),
+                finish_reason="stop",
+            )
+        ]
         mock_response.usage = MagicMock(prompt_tokens=15, completion_tokens=25, total_tokens=40)
 
         mock_openai_client.chat.completions.create.return_value = mock_response
 
         messages = [
             ApiMessage(role=MessageRole.USER, content="Use tool"),
-            ApiMessage(role=MessageRole.TOOL, content="Tool result", tool_call_id="call_1")
+            ApiMessage(role=MessageRole.TOOL, content="Tool result", tool_call_id="call_1"),
         ]
         await client.send_request(messages)
 
         call_args = mock_openai_client.chat.completions.create.call_args
-        openai_messages = call_args[1]['messages']
+        openai_messages = call_args[1]["messages"]
         tool_msg = openai_messages[-1]
-        assert tool_msg['role'] == 'tool'
-        assert tool_msg['content'] == 'Tool result'
-        assert tool_msg['tool_call_id'] == 'call_1'
+        assert tool_msg["role"] == "tool"
+        assert tool_msg["content"] == "Tool result"
+        assert tool_msg["tool_call_id"] == "call_1"
 
     @pytest.mark.asyncio
     async def test_stream_request_success(self, client, mock_openai_client):
@@ -229,7 +306,7 @@ class TestOpenAIClientUnit:
             chunk.choices[0].delta.content = content
             chunks.append(chunk)
 
-        mock_openai_client.chat.completions.create.return_value = chunks.__aiter__()
+        mock_openai_client.chat.completions.create.return_value = mock_async_stream(chunks)
 
         messages = [ApiMessage(role=MessageRole.USER, content="Stream test")]
         result = []
@@ -239,7 +316,7 @@ class TestOpenAIClientUnit:
         assert result == ["Hello", " world", "!"]
 
         call_args = mock_openai_client.chat.completions.create.call_args
-        assert call_args[1]['stream'] is True
+        assert call_args[1]["stream"] is True
 
     @pytest.mark.asyncio
     async def test_stream_request_with_empty_chunks(self, client, mock_openai_client):
@@ -252,7 +329,7 @@ class TestOpenAIClientUnit:
             chunk.choices[0].delta.content = None  # No content
             chunks.append(chunk)
 
-        mock_openai_client.chat.completions.create.return_value = chunks.__aiter__()
+        mock_openai_client.chat.completions.create.return_value = mock_async_stream(chunks)
 
         messages = [ApiMessage(role=MessageRole.USER, content="Test")]
         result = []
@@ -275,7 +352,9 @@ class TestOpenAIClientUnit:
     @pytest.mark.asyncio
     async def test_validate_connection_auth_error(self, mock_openai_client):
         """Test connection validation with auth error."""
-        mock_openai_client.models.list.side_effect = openai.AuthenticationError("Invalid API key")
+        mock_openai_client.models.list.side_effect = create_mock_openai_error(
+            openai.AuthenticationError, "Invalid API key"
+        )
 
         client = OpenAIClient(self.provider)
         result = await client.validate_connection()
@@ -285,7 +364,9 @@ class TestOpenAIClientUnit:
     @pytest.mark.asyncio
     async def test_validate_connection_network_error(self, mock_openai_client):
         """Test connection validation with network error."""
-        mock_openai_client.models.list.side_effect = openai.NetworkError("Connection failed")
+        mock_openai_client.models.list.side_effect = create_mock_openai_error(
+            openai.APIConnectionError, "Connection failed"
+        )
 
         client = OpenAIClient(self.provider)
         result = await client.validate_connection()
@@ -321,7 +402,9 @@ class TestOpenAIClientUnit:
     @pytest.mark.asyncio
     async def test_handle_openai_error_rate_limit(self, mock_openai_client):
         """Test OpenAI rate limit error handling."""
-        mock_openai_client.chat.completions.create.side_effect = openai.RateLimitError("Rate limit exceeded")
+        mock_openai_client.chat.completions.create.side_effect = create_mock_openai_error(
+            openai.RateLimitError, "Rate limit exceeded"
+        )
 
         client = OpenAIClient(self.provider)
         messages = [ApiMessage(role=MessageRole.USER, content="Test")]
@@ -334,7 +417,9 @@ class TestOpenAIClientUnit:
     @pytest.mark.asyncio
     async def test_handle_openai_error_authentication(self, mock_openai_client):
         """Test OpenAI authentication error handling."""
-        mock_openai_client.chat.completions.create.side_effect = openai.AuthenticationError("Invalid API key")
+        mock_openai_client.chat.completions.create.side_effect = create_mock_openai_error(
+            openai.AuthenticationError, "Invalid API key"
+        )
 
         client = OpenAIClient(self.provider)
         messages = [ApiMessage(role=MessageRole.USER, content="Test")]
@@ -347,7 +432,9 @@ class TestOpenAIClientUnit:
     @pytest.mark.asyncio
     async def test_handle_openai_error_network(self, mock_openai_client):
         """Test OpenAI network error handling."""
-        mock_openai_client.chat.completions.create.side_effect = openai.NetworkError("Connection failed")
+        mock_openai_client.chat.completions.create.side_effect = create_mock_openai_error(
+            openai.APIConnectionError, "Connection failed"
+        )
 
         client = OpenAIClient(self.provider)
         messages = [ApiMessage(role=MessageRole.USER, content="Test")]
@@ -360,7 +447,9 @@ class TestOpenAIClientUnit:
     @pytest.mark.asyncio
     async def test_handle_openai_error_api_error(self, mock_openai_client):
         """Test OpenAI API error handling."""
-        mock_openai_client.chat.completions.create.side_effect = openai.APIError("API error occurred")
+        mock_openai_client.chat.completions.create.side_effect = create_mock_openai_error(
+            openai.APIError, "API error occurred"
+        )
 
         client = OpenAIClient(self.provider)
         messages = [ApiMessage(role=MessageRole.USER, content="Test")]
@@ -385,7 +474,9 @@ class TestOpenAIClientUnit:
     @pytest.mark.asyncio
     async def test_stream_request_error(self, mock_openai_client):
         """Test streaming with error."""
-        mock_openai_client.chat.completions.create.side_effect = openai.APIError("Stream error")
+        mock_openai_client.chat.completions.create.side_effect = create_mock_openai_error(
+            openai.APIError, "Stream error"
+        )
 
         client = OpenAIClient(self.provider)
         messages = [ApiMessage(role=MessageRole.USER, content="Test")]
@@ -403,31 +494,54 @@ class TestOpenAIClientUnit:
 
         # Mock tool call with model_dump
         tool_call = MagicMock()
-        tool_call.model_dump.return_value = {"id": "call_1", "type": "function", "function": {"name": "test"}}
+        tool_call.model_dump.return_value = {
+            "id": "call_1",
+            "type": "function",
+            "function": {"name": "test"},
+        }
 
         mock_response = MagicMock(spec=ChatCompletion)
-        mock_response.choices = [Choice(index=0, message=ChatCompletionMessage(role="assistant", content=""), finish_reason="stop")]
+        mock_response.choices = [
+            Choice(
+                index=0,
+                message=ChatCompletionMessage(role="assistant", content=""),
+                finish_reason="stop",
+            )
+        ]
         mock_response.choices[0].message.tool_calls = [tool_call]
         mock_response.usage = MagicMock(prompt_tokens=10, completion_tokens=20, total_tokens=30)
 
         response = client._convert_response_from_openai(mock_response)
-        assert response.tool_calls == [{"id": "call_1", "type": "function", "function": {"name": "test"}}]
+        assert response.tool_calls == [
+            {"id": "call_1", "type": "function", "function": {"name": "test"}}
+        ]
 
     @pytest.mark.asyncio
     async def test_convert_tool_calls_fallback(self):
         """Test converting tool calls with fallback method."""
         client = OpenAIClient(self.provider)
 
-        # Mock tool call without model_dump
-        tool_call = MagicMock()
-        del tool_call.model_dump  # Remove model_dump if it exists
+        # Create a proper mock tool call without model_dump or to_dict
+        tool_call = Mock()
+        tool_call.model_dump = None  # Explicitly set to None instead of deleting
+        tool_call.to_dict = None
         tool_call.id = "call_1"
         tool_call.type = "function"
-        tool_call.function.name = "test_func"
-        tool_call.function.arguments = '{"arg": "value"}'
+
+        # Create function mock
+        func = Mock()
+        func.name = "test_func"
+        func.arguments = '{"arg": "value"}'
+        tool_call.function = func
 
         mock_response = MagicMock(spec=ChatCompletion)
-        mock_response.choices = [Choice(index=0, message=ChatCompletionMessage(role="assistant", content=""), finish_reason="stop")]
+        mock_response.choices = [
+            Choice(
+                index=0,
+                message=ChatCompletionMessage(role="assistant", content=""),
+                finish_reason="stop",
+            )
+        ]
         mock_response.choices[0].message.tool_calls = [tool_call]
         mock_response.usage = MagicMock(prompt_tokens=10, completion_tokens=20, total_tokens=30)
 
@@ -477,7 +591,9 @@ class TestOpenAIClientIntegration:
         """Integration test: send a real request to OpenAI."""
         client = OpenAIClient(self.provider)
         messages = [
-            ApiMessage(role=MessageRole.USER, content="Say 'Hello, OpenAI!' in exactly those words.")
+            ApiMessage(
+                role=MessageRole.USER, content="Say 'Hello, OpenAI!' in exactly those words."
+            )
         ]
 
         response = await client.send_request(messages)
@@ -494,9 +610,7 @@ class TestOpenAIClientIntegration:
     async def test_integration_stream_request(self):
         """Integration test: stream a real response from OpenAI."""
         client = OpenAIClient(self.provider)
-        messages = [
-            ApiMessage(role=MessageRole.USER, content="Count from 1 to 5 slowly.")
-        ]
+        messages = [ApiMessage(role=MessageRole.USER, content="Count from 1 to 5 slowly.")]
 
         chunks = []
         async for chunk in client.stream_request(messages):
@@ -536,8 +650,11 @@ class TestOpenAIClientIntegration:
         """Integration test: send request with system message."""
         client = OpenAIClient(self.provider)
         messages = [
-            ApiMessage(role=MessageRole.SYSTEM, content="You are a helpful assistant. Always end with '😊'."),
-            ApiMessage(role=MessageRole.USER, content="Say hello.")
+            ApiMessage(
+                role=MessageRole.SYSTEM,
+                content="You are a helpful assistant. Always end with '😊'.",
+            ),
+            ApiMessage(role=MessageRole.USER, content="Say hello."),
         ]
 
         response = await client.send_request(messages)

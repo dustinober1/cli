@@ -5,18 +5,16 @@ This module tests the ReferenceResolver class which provides cross-file
 symbol tracking and reference resolution.
 """
 
-import tempfile
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from vibe_coder.intelligence.reference_resolver import ReferenceResolver
 from vibe_coder.intelligence.types import (
+    ClassSignature,
     Definition,
     FileNode,
     FunctionSignature,
-    ClassSignature,
     SymbolReference,
 )
 
@@ -56,22 +54,17 @@ class TestDefinitionIndexing:
             file_path="test.py",
             line_start=10,
             line_end=20,
-            docstring="Test function"
+            docstring="Test function",
         )
         func2 = FunctionSignature(
             name="another_function",
             module_path="test",
             file_path="test.py",
             line_start=30,
-            line_end=40
+            line_end=40,
         )
 
-        node = FileNode(
-            path="test.py",
-            language="python",
-            functions=[func1, func2],
-            classes=[]
-        )
+        node = FileNode(path="test.py", language="python", functions=[func1, func2], classes=[])
 
         await resolver._index_definitions("test.py", node)
 
@@ -102,15 +95,10 @@ class TestDefinitionIndexing:
             file_path="test.py",
             line_start=5,
             line_end=25,
-            docstring="Test class"
+            docstring="Test class",
         )
 
-        node = FileNode(
-            path="test.py",
-            language="python",
-            functions=[],
-            classes=[cls]
-        )
+        node = FileNode(path="test.py", language="python", functions=[], classes=[cls])
 
         await resolver._index_definitions("test.py", node)
 
@@ -140,7 +128,7 @@ class TestDefinitionIndexing:
             file_path="test.py",
             line_start=15,
             line_end=20,
-            is_method=True
+            is_method=True,
         )
         method2 = FunctionSignature(
             name="method2",
@@ -148,7 +136,7 @@ class TestDefinitionIndexing:
             file_path="test.py",
             line_start=25,
             line_end=30,
-            is_method=True
+            is_method=True,
         )
 
         cls = ClassSignature(
@@ -157,15 +145,10 @@ class TestDefinitionIndexing:
             file_path="test.py",
             line_start=5,
             line_end=35,
-            methods=[method1, method2]
+            methods=[method1, method2],
         )
 
-        node = FileNode(
-            path="test.py",
-            language="python",
-            functions=[],
-            classes=[cls]
-        )
+        node = FileNode(path="test.py", language="python", functions=[], classes=[cls])
 
         await resolver._index_definitions("test.py", node)
 
@@ -190,18 +173,10 @@ class TestDefinitionIndexing:
 
         # Create two files with functions of the same name
         func1 = FunctionSignature(
-            name="helper",
-            module_path="utils1",
-            file_path="utils1.py",
-            line_start=1,
-            line_end=10
+            name="helper", module_path="utils1", file_path="utils1.py", line_start=1, line_end=10
         )
         func2 = FunctionSignature(
-            name="helper",
-            module_path="utils2",
-            file_path="utils2.py",
-            line_start=1,
-            line_end=10
+            name="helper", module_path="utils2", file_path="utils2.py", line_start=1, line_end=10
         )
 
         node1 = FileNode(path="utils1.py", language="python", functions=[func1], classes=[])
@@ -299,7 +274,7 @@ class TestImportResolution:
 
         resolver = ReferenceResolver(mock_mapper)
 
-        with patch.object(resolver, '_resolve_import_path') as mock_resolve:
+        with patch.object(resolver, "_resolve_import_path") as mock_resolve:
             mock_resolve.side_effect = lambda imp, dir: {
                 "utils.helper": "utils/helper.py",
                 "models": "models/__init__.py",
@@ -361,7 +336,9 @@ class TestReferenceIndexing:
 
         resolver = ReferenceResolver(mock_mapper)
 
-        await resolver._index_references("standalone.py", mock_mapper._repo_map.modules["standalone.py"])
+        await resolver._index_references(
+            "standalone.py", mock_mapper._repo_map.modules["standalone.py"]
+        )
 
         # Should still create entry for the file
         assert "standalone.py" in resolver._reference_index
@@ -384,18 +361,10 @@ class TestBuildIndexes:
 
         # Add functions and classes to nodes
         main_func = FunctionSignature(
-            name="main",
-            module_path="main",
-            file_path="main.py",
-            line_start=1,
-            line_end=10
+            name="main", module_path="main", file_path="main.py", line_start=1, line_end=10
         )
         utils_func = FunctionSignature(
-            name="helper",
-            module_path="utils",
-            file_path="utils.py",
-            line_start=1,
-            line_end=10
+            name="helper", module_path="utils", file_path="utils.py", line_start=1, line_end=10
         )
 
         mock_mapper._repo_map.modules["main.py"].functions = [main_func]
@@ -405,8 +374,10 @@ class TestBuildIndexes:
 
         resolver = ReferenceResolver(mock_mapper)
 
-        with patch.object(resolver, '_resolve_import_path') as mock_resolve, \
-             patch.object(resolver, '_index_references') as mock_index_refs:
+        with (
+            patch.object(resolver, "_resolve_import_path") as mock_resolve,
+            patch.object(resolver, "_index_references") as mock_index_refs,
+        ):
             mock_resolve.return_value = "utils.py"
 
             await resolver.build_indexes()
@@ -454,7 +425,7 @@ class TestFindReferences:
             column=10,
             reference_type="usage",
             context="helper()",
-            symbol_type="function"
+            symbol_type="function",
         )
         ref2 = SymbolReference(
             name="helper",
@@ -463,7 +434,7 @@ class TestFindReferences:
             column=5,
             reference_type="usage",
             context="helper()",
-            symbol_type="function"
+            symbol_type="function",
         )
         ref3 = SymbolReference(
             name="other_func",
@@ -472,7 +443,7 @@ class TestFindReferences:
             column=1,
             reference_type="usage",
             context="other_func()",
-            symbol_type="function"
+            symbol_type="function",
         )
 
         resolver._reference_index = {
@@ -501,7 +472,7 @@ class TestFindReferences:
             column=10,
             reference_type="usage",
             context="target()",
-            symbol_type="function"
+            symbol_type="function",
         )
         ref2 = SymbolReference(
             name="target",
@@ -510,7 +481,7 @@ class TestFindReferences:
             column=5,
             reference_type="usage",
             context="target()",
-            symbol_type="function"
+            symbol_type="function",
         )
 
         resolver._reference_index = {
@@ -537,7 +508,7 @@ class TestFindReferences:
             column=10,
             reference_type="usage",
             context="Class.method()",
-            symbol_type="method"
+            symbol_type="method",
         )
 
         resolver._reference_index = {
@@ -570,7 +541,7 @@ class TestFindDefinition:
             column=4,
             type="function",
             signature="target_func()",
-            docstring="Target function"
+            docstring="Target function",
         )
 
         resolver._symbol_index = {
@@ -589,18 +560,10 @@ class TestFindDefinition:
 
         # Setup symbol index with multiple definitions
         def1 = Definition(
-            symbol="helper",
-            file_path="main.py",
-            line_number=5,
-            column=4,
-            type="function"
+            symbol="helper", file_path="main.py", line_number=5, column=4, type="function"
         )
         def2 = Definition(
-            symbol="helper",
-            file_path="utils.py",
-            line_number=10,
-            column=4,
-            type="function"
+            symbol="helper", file_path="utils.py", line_number=10, column=4, type="function"
         )
 
         resolver._symbol_index = {
@@ -624,18 +587,10 @@ class TestFindDefinition:
 
         # Setup symbol index with multiple definitions
         def1 = Definition(
-            symbol="helper",
-            file_path="other.py",
-            line_number=5,
-            column=4,
-            type="function"
+            symbol="helper", file_path="other.py", line_number=5, column=4, type="function"
         )
         def2 = Definition(
-            symbol="helper",
-            file_path="utils.py",
-            line_number=10,
-            column=4,
-            type="function"
+            symbol="helper", file_path="utils.py", line_number=10, column=4, type="function"
         )
 
         resolver._symbol_index = {
@@ -657,18 +612,10 @@ class TestFindDefinition:
 
         # Setup symbol index with class and method
         class_def = Definition(
-            symbol="MyClass",
-            file_path="class.py",
-            line_number=5,
-            column=4,
-            type="class"
+            symbol="MyClass", file_path="class.py", line_number=5, column=4, type="class"
         )
         method_def = Definition(
-            symbol="MyClass.method",
-            file_path="class.py",
-            line_number=15,
-            column=8,
-            type="method"
+            symbol="MyClass.method", file_path="class.py", line_number=15, column=8, type="method"
         )
 
         resolver._symbol_index = {
@@ -869,18 +816,10 @@ class TestIntegration:
 
         # Add functions to modules
         main_func = FunctionSignature(
-            name="main",
-            module_path="main",
-            file_path="main.py",
-            line_start=1,
-            line_end=10
+            name="main", module_path="main", file_path="main.py", line_start=1, line_end=10
         )
         utils_func = FunctionSignature(
-            name="helper",
-            module_path="utils",
-            file_path="utils.py",
-            line_start=1,
-            line_end=10
+            name="helper", module_path="utils", file_path="utils.py", line_start=1, line_end=10
         )
 
         mock_mapper._repo_map.modules["main.py"].functions = [main_func]
@@ -891,7 +830,7 @@ class TestIntegration:
         # Create resolver and build indexes
         resolver = ReferenceResolver(mock_mapper)
 
-        with patch.object(resolver, '_resolve_import_path') as mock_resolve:
+        with patch.object(resolver, "_resolve_import_path") as mock_resolve:
             mock_resolve.return_value = "utils.py"
 
             await resolver.build_indexes()

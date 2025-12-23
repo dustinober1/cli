@@ -5,7 +5,7 @@ This module tests the TokenBudgeter class which provides dynamic
 token allocation based on context, operation type, and conversation history.
 """
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -144,7 +144,9 @@ class TestCalculateBudget:
 
             # Check operation-specific allocations
             if op == "fix":
-                assert budget.allocations.get("target_file", 0) > budget.allocations.get("repository_overview", 0)
+                assert budget.allocations.get("target_file", 0) > budget.allocations.get(
+                    "repository_overview", 0
+                )
             elif op == "explain":
                 assert "metadata" in budget.allocations
 
@@ -251,7 +253,7 @@ class TestCompressContext:
             ),
         ]
 
-        with patch.object(budgeter, '_summarize_item') as mock_summarize:
+        with patch.object(budgeter, "_summarize_item") as mock_summarize:
             # Mock summarization to reduce tokens
             summarized = ContextItem(
                 path="large.py",
@@ -345,7 +347,9 @@ class TestCompressContext:
         compressed = await budgeter.compress_context(items, budget)
 
         # Should not exceed target_file allocation (50 tokens)
-        target_tokens = sum(item.token_count for item in compressed if item.path.startswith("target"))
+        target_tokens = sum(
+            item.token_count for item in compressed if item.path.startswith("target")
+        )
         assert target_tokens <= 50
 
     def test_get_allocation_key(self):

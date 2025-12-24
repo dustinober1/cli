@@ -240,7 +240,7 @@ class TestValidateTypes:
             mock_run.return_value = {
                 "returncode": 1,
                 "stdout": (
-                    'test.py:2: error: Incompatible return value type '
+                    "test.py:2: error: Incompatible return value type "
                     '(got "int", expected "str")\n'
                 ),
                 "stderr": "",

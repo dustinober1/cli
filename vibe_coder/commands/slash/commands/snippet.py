@@ -27,7 +27,7 @@ class SnippetCommand(SlashCommand):
             return """Usage: /snippet <action> [arguments]
 
 Actions:
-- save <name> <language> [description] - Save current file or selection
+- save <name> <language> [--file <path>] [description] - Save code as snippet
 - get <name> - Get a snippet by name
 - search <query> - Search snippets
 - list [category] [language] - List snippets
@@ -35,7 +35,8 @@ Actions:
 - stats - Show snippet statistics
 
 Examples:
-- /snippet save quicksort python "Quick sort implementation"
+- /snippet save quicksort python --file sort.py "Quick sort implementation"
+- /snippet save myfunc python "Utility function"  (uses first code file found)
 - /snippet get quicksort
 - /snippet search "sort algorithm"
 - /snippet list python
@@ -64,33 +65,57 @@ Examples:
     async def _save_snippet(
         self, snippet_manager: SnippetManager, args: List[str], context: CommandContext
     ) -> str:
-        """Save a code snippet."""
+        """Save a code snippet.
+
+        Usage: /snippet save <name> <language> [--file <path>] [description]
+
+        If --file is not provided, will use the first code file found in the current directory.
+        """
         if len(args) < 2:
-            return "Usage: /snippet save <name> <language> [description]"
+            return "Usage: /snippet save <name> <language> [--file <path>] [description]"
 
         name = args[0]
         language = args[1]
-        description = " ".join(args[2:]) if len(args) > 2 else ""
+        description = ""
+        file_path = None
+
+        # Parse optional --file argument and description
+        i = 2
+        while i < len(args):
+            if args[i] == "--file" and i + 1 < len(args):
+                file_path = args[i + 1]
+                i += 2
+            else:
+                description = " ".join(args[i:])
+                break
 
         # Get code content
-        # TODO: In a real implementation, this would get selected text from editor
-        # For now, we'll look for a file or read from stdin
         file_ops = FileOperations(context.working_directory)
 
-        # Try to find a file to save as snippet
-        code_files = list(Path(context.working_directory).glob("*"))
-        code_files = [
-            f
-            for f in code_files
-            if f.suffix in [".py", ".js", ".ts", ".java", ".cpp", ".c", ".go", ".rs"]
-        ]
+        if file_path:
+            # Use specified file
+            code_file = Path(file_path)
+            if not code_file.exists():
+                return f"File not found: {file_path}"
+            code_content = await file_ops.read_file(str(code_file))
+        else:
+            # Try to find a file to save as snippet
+            code_files = list(Path(context.working_directory).glob("*"))
+            code_files = [
+                f
+                for f in code_files
+                if f.suffix in [".py", ".js", ".ts", ".java", ".cpp", ".c", ".go", ".rs"]
+            ]
 
-        if not code_files:
-            return "No code file found. Please specify a file or have code in current directory."
+            if not code_files:
+                return (
+                    "No code file found. Please specify a file with --file "
+                    "or have code in current directory."
+                )
 
-        # For demo, use the first code file found
-        code_file = code_files[0]
-        code_content = await file_ops.read_file(str(code_file))
+            # Use the first code file found
+            code_file = code_files[0]
+            code_content = await file_ops.read_file(str(code_file))
 
         # Determine category based on content or file type
         category = self._determine_category(code_content, language)
@@ -108,7 +133,10 @@ Examples:
             tags=tags,
         )
 
-        return f"{result}\n\n📝 File saved: {code_file.name}\n🏷️  Category: {category}\n📌 Tags: {', '.join(tags) if tags else 'None'}"
+        tags_str = ", ".join(tags) if tags else "None"
+        file_info = f"{result}\n\n📝 File saved: {code_file.name}\n"
+        file_info += f"🏷️  Category: {category}\n📌 Tags: {tags_str}"
+        return file_info
 
     def _determine_category(self, code: str, language: str) -> str:
         """Determine category from code content."""
@@ -210,13 +238,14 @@ Examples:
             # Try search as fallback
             results = snippet_manager.search_snippets(name)
             if results:
-                return f"Snippet '{name}' not found. Did you mean:\n" + "\n".join(
-                    [f"  • {r['name']} ({r['language']})" for r in results[:5]]
-                )
+                suggestions = "\n".join([f"  • {r['name']} ({r['language']})" for r in results[:5]])
+                return f"Snippet '{name}' not found. Did you mean:\n{suggestions}"
             return f"Snippet '{name}' not found"
 
         if isinstance(snippet, dict) and snippet.get("type") == "tag_list":
-            return f"'{name}' is a tag with {len(snippet['snippets'])} snippets. Use /snippet list --tag {name}"
+            msg = f"'{name}' is a tag with {len(snippet['snippets'])} snippets. "
+            msg += f"Use /snippet list --tag {name}"
+            return msg
 
         # Return formatted snippet
         output = [f"📝 {snippet['name']}"]
@@ -249,13 +278,12 @@ Examples:
 
         for result in results:
             output.append(f"  📝 {result['name']} ({result['language']})")
-            output.append(
-                f"     {result['description'][:80]}..."
-                if len(result["description"]) > 80
-                else f"     {result['description']}"
-            )
+            # Truncate description if too long
+            desc = result["description"]
+            display_desc = f"{desc[:80]}..." if len(desc) > 80 else desc
+            output.append(f"     {display_desc}")
             if result.get("match_type") == "code":
-                output.append(f"     🔍 Match found in code")
+                output.append("     🔍 Match found in code")
             output.append("")
 
         return "\n".join(output)

@@ -384,9 +384,7 @@ def test_main():
                 "class User:\n    def __init__(self, name):\n        self.name = name"
             ),
             "src/models/base.py": "class BaseModel:\n    pass",
-            "tests/unit/test_helper.py": (
-                "def test_helper():\n    assert helper() == 'help'"
-            ),
+            "tests/unit/test_helper.py": ("def test_helper():\n    assert helper() == 'help'"),
             "tests/integration/test_models.py": (
                 "def test_user():\n    u = User('test')\n    assert u.name == 'test'"
             ),
